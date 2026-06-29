@@ -19,7 +19,7 @@ install.sh symlinks all of the above into place (idempotent, backs up existing f
 ## Install on a new machine
 
 ```sh
-git clone git@github.com:Ganzorig2022/agent-dotfiles.git ~/agent-stack
+git clone git@github.com:Ganzorig2022/agent-setup.git ~/agent-stack
 ~/agent-stack/install.sh
 ```
 
