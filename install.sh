@@ -29,6 +29,16 @@ link() {
   echo "linked: $dst → $src"
 }
 
+# seed <repo-relative-path> <absolute-destination>  (copy ONLY if dest is absent)
+# For files the tool rewrites itself (e.g. Codex config.toml) — never symlink/overwrite.
+seed() {
+  local src="$REPO/$1" dst="$2"
+  if [ -e "$dst" ]; then echo "kept existing: $dst"; return; fi
+  mkdir -p "$(dirname "$dst")"
+  cp "$src" "$dst"
+  echo "seeded: $dst (from $1)"
+}
+
 # link_skills <repo-skills-subdir> <live-skills-dir>
 # Tool skill dirs mix real skills with symlinks into ~/.agents/skills. Keep the live
 # dir REAL and reproduce each entry so the relative ../../.agents/skills/* links resolve.
@@ -76,6 +86,7 @@ link_skills codex/skills          "$HOME/.codex/skills"
 link codex/rules/common           "$HOME/.codex/rules/common"
 link codex/rules/qpay             "$HOME/.codex/rules/qpay"
 link codex/rules/lessons.md       "$HOME/.codex/rules/lessons.md"
+seed codex/config.template.toml   "$HOME/.codex/config.toml"   # copy-if-absent (Codex owns this file)
 
 echo "== OpenCode =="
 link opencode/skills              "$HOME/.config/opencode/skills"

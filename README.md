@@ -11,7 +11,8 @@ synced across machines via one private repo + symlinks.
 agents/    skills/ (.agents shared skill library — real content) + .skill-lock.json
 claude/    CLAUDE.md, prompt-defense.md, settings.json ($HOME-relative),
            agent-memory/STATE.md, agents/ skills/ commands/ hooks/ qpay-context/
-codex/     AGENTS.md, MIGRATION.md, agents/ skills/ commands/, rules/{common,qpay,lessons.md}
+codex/     AGENTS.md, MIGRATION.md, agents/ skills/ commands/, rules/{common,qpay,lessons.md},
+           config.template.toml  (portable prefs — seeded to ~/.codex/config.toml if absent)
 opencode/  skills/, opencode.json
 home/      AGENTS.md  (→ ~/AGENTS.md)
 install.sh symlinks all of the above into place (idempotent, backs up existing files)
