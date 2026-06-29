@@ -1,0 +1,25 @@
+# ── Secrets / credentials — never commit ────────────────────────────
+auth.json
+settings.local.json
+default.rules
+.env
+.env.*
+*.pem
+*.key
+id_rsa*
+
+# ── Runtime state / logs / databases ────────────────────────────────
+*.sqlite
+*.sqlite-*
+history.jsonl
+session_index.jsonl
+*.log
+
+# ── Local-only Codex config (machine-specific project trust + paths) ─
+config.toml
+
+# ── Build / OS / editor junk ────────────────────────────────────────
+node_modules/
+*.backup.*
+*.bak
+.DS_Store

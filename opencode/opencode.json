@@ -1,0 +1,24 @@
+{
+  "$schema": "https://opencode.ai/config.json",
+  "provider": {
+    "ollama": {
+      "npm": "@ai-sdk/openai-compatible",
+      "name": "Ollama (local)",
+      "options": {
+        "baseURL": "http://localhost:11434/v1"
+      },
+      "models": {
+        "qwen3.6:35b-a3b-nvfp4": {
+          "name": "qwen3.6:35b-a3b-nvfp4"
+        },
+        "gemma4:26b-64k": {
+          "name": "gemma4:26b-64k"
+        },
+        "qwen3-coder:30b-64k": {
+          "name": "qwen3-coder:30b-64k"
+        }
+      }
+    }
+  },
+  "model": "opencode-go/minimax-m3"
+}

@@ -1,0 +1,4 @@
+- Read existing code before editing.
+- Keep diffs small.
+- Follow current project patterns.
+- Explain changes briefly after editing.

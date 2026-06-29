@@ -1,0 +1,4 @@
+interface:
+  display_name: "Node Version Runtime"
+  short_description: "Align .nvmrc and engines with runtime"
+  default_prompt: "Use $node-version-runtime to align a project’s .nvmrc and package.json engines with its Docker runtime."
