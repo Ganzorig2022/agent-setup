@@ -1,4 +1,4 @@
-# agent-stack
+# agent-setup
 
 Portable configuration for my AI coding agents — **Claude Code**, **Codex**, and **OpenCode** —
 synced across machines via one private repo + symlinks.
@@ -8,6 +8,7 @@ synced across machines via one private repo + symlinks.
 ## What's here
 
 ```
+agents/    skills/ (.agents shared skill library — real content) + .skill-lock.json
 claude/    CLAUDE.md, prompt-defense.md, settings.json ($HOME-relative),
            agent-memory/STATE.md, agents/ skills/ commands/ hooks/ qpay-context/
 codex/     AGENTS.md, MIGRATION.md, agents/ skills/ commands/, rules/{common,qpay,lessons.md}
@@ -15,6 +16,11 @@ opencode/  skills/, opencode.json
 home/      AGENTS.md  (→ ~/AGENTS.md)
 install.sh symlinks all of the above into place (idempotent, backs up existing files)
 ```
+
+Some skills in `claude/skills` and `codex/skills` are symlinks into the shared
+`~/.agents/skills` library (vendored here under `agents/`). `install.sh` links
+`~/.agents/skills → agents/skills` and reproduces those relative symlinks so they
+resolve on any machine.
 
 ## Install on a new machine
 
