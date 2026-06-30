@@ -104,6 +104,7 @@ link home/Library/LaunchAgents/com.dev.daily-decisions.plist \
 
 echo "== Automation (x-draft-factory — nightly X content drafts) =="
 link home/.local/bin/x-draft-factory.py          "$HOME/.local/bin/x-draft-factory.py"
+link home/.local/bin/qpay-gem-harvest.py         "$HOME/.local/bin/qpay-gem-harvest.py"
 link home/Library/LaunchAgents/com.dev.x-draft-factory.plist \
                                                  "$HOME/Library/LaunchAgents/com.dev.x-draft-factory.plist"
 

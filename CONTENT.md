@@ -41,6 +41,21 @@ All on subscriptions (headless `claude`) — no API bills.
 - **One accent per artifact**, fixed template — guarantees clean cards from AI-written text.
 - **Authentic > generic.** Drafts come from real work in the vault, not generic AI tips.
 
+## Confidentiality boundary (do not weaken)
+
+The vault holds BOTH personal/shareable material AND private employer (QPay) internals.
+The content factory must never surface employer IP into a public draft. Two walls enforce this:
+
+1. **Source exclusion** — `x-draft-factory.py` reads only `decisions/` + `profile/`. It never
+   reads `qpay/`, `systems/`, or `models/` (deep internal architecture).
+2. **Prompt guardrail** — the factory prompt forbids company/repo/schema/infra/business-logic
+   specifics and tells it to SKIP anything that can't be generalized.
+3. **Human review** — you eyeball every draft before scheduling. Borderline = skip.
+
+`qpay-gem-harvest.py` harvests internal repo docs into `knowledge-base/qpay/` for **agent +
+coding recall only** — that folder is private and excluded from the content path above.
+The `knowledge-base` vault must stay **PRIVATE** (it once leaked public — never again).
+
 ## Honest stage
 
 Audience-building, not monetization. X ads-rev-share needs **500 verified followers +

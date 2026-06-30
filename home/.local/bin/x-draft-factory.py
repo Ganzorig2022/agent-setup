@@ -109,16 +109,17 @@ def build_html(d: dict) -> str:
 
 
 def gather_material(vault: pathlib.Path) -> str:
+    # SAFETY: only read the daily decision log + the creator profile. Deliberately
+    # EXCLUDE deep-internal notes (systems/, models/, qpay/, internal/) — those hold
+    # employer architecture that must never reach a public-facing draft. The decision
+    # log can still contain work specifics, so the prompt enforces a hard confidentiality
+    # guardrail on top, and the human reviews every draft before posting.
     chunks = []
     for f in sorted(glob.glob(str(vault / "decisions/*.md")))[-3:]:
         chunks.append(pathlib.Path(f).read_text(errors="ignore"))
-    for name in ("profile/creator-journey.md",):
-        p = vault / name
-        if p.exists():
-            chunks.append(p.read_text(errors="ignore"))
-    # a couple of evergreen systems/models notes for variety
-    for f in sorted(glob.glob(str(vault / "systems/*.md")))[:2]:
-        chunks.append(pathlib.Path(f).read_text(errors="ignore")[:2500])
+    p = vault / "profile/creator-journey.md"
+    if p.exists():
+        chunks.append(p.read_text(errors="ignore"))
     return "\n\n---\n\n".join(chunks)[:120_000]
 
 
@@ -126,6 +127,19 @@ PROMPT = f"""You are the content strategist for {HANDLE}, a software engineer bu
 public on X about AI agents, dev tooling, and productivity. Audience: English-speaking
 developers (mostly US). Brand voice: clean, direct, specific, lightly opinionated, NO hype,
 no emoji. Show the HOW, name real tools, give one concrete number when possible.
+
+=== CONFIDENTIALITY — NON-NEGOTIABLE ===
+The work notes below may contain the user's EMPLOYER's confidential details. These must NEVER
+appear in a draft (drafts are for PUBLIC posting):
+- company / product / brand names, or internal repo names
+- internal database schema, table/column names, service names, API shapes
+- proprietary architecture, business logic, CI/build/infra specifics, settlement/ledger/payment internals
+Write ONLY about GENERAL, transferable techniques OR the user's OWN general/personal tooling
+(e.g. his AI-agent memory setup, local-model workflow, generic Docker/CI lessons stated in
+universal terms). If an item cannot be shared without revealing employer specifics, SKIP it
+entirely — produce fewer drafts rather than leak. Generalize: "a service" not the real name,
+"a build" not the internal pipeline. When in doubt, leave it out.
+=== END CONFIDENTIALITY ===
 
 From the raw work notes below, write {N_DRAFTS} DISTINCT post drafts for tomorrow. Pick the
 most genuinely interesting, differentiated angles — real specifics from the notes, not generic
