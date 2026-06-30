@@ -20,5 +20,12 @@
       }
     }
   },
+  "mcp": {
+    "qmd": {
+      "type": "local",
+      "command": ["/Users/dev/.local/bin/qmd", "mcp"],
+      "enabled": true
+    }
+  },
   "model": "opencode-go/minimax-m3"
 }
