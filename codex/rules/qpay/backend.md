@@ -1,5 +1,11 @@
 # QPay Backend — Standing Facts
 
+## Two Cores (Old vs New)
+QPay runs two parallel codebases — always know which one you're in:
+- **Old core** — legacy, cloned from **git.qpay.mn** (GitLab) to `/Users/dev/QPay`. The Stack A/B/C mix below (mostly Express/Babel + Sequelize/Mongo).
+- **New core** — the **github.com/qpay-mn** org, cloned to `~/qpay-mn`. Predominantly **Fastify + TypeScript + Zod** (Stack C) services + shared `qpay-lib-*` packages; Gen-3 (Next/React/Zustand/Radix) web apps.
+- Harvested architecture docs for both live in the **private** `knowledge-base` vault under `qpay/old-core/` and `qpay/new-core/`, queryable via the `qmd` MCP. Refresh with `qpay-gem-harvest.py`.
+
 ## Three Backend Stacks
 
 ### Stack A — Classic QPay (most qpay-* services)
