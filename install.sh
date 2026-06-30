@@ -71,7 +71,7 @@ link claude/CLAUDE.md             "$HOME/.claude/CLAUDE.md"
 link claude/prompt-defense.md     "$HOME/.claude/prompt-defense.md"
 link claude/settings.json         "$HOME/.claude/settings.json"
 link claude/agent-memory/STATE.md "$HOME/.claude/agent-memory/STATE.md"
-for d in agents commands hooks qpay-context; do
+for d in agents commands hooks qpay-context content; do
   link "claude/$d"                "$HOME/.claude/$d"
 done
 link_skills claude/skills         "$HOME/.claude/skills"
@@ -102,10 +102,17 @@ link home/.local/bin/qmd                         "$HOME/.local/bin/qmd"   # stab
 link home/Library/LaunchAgents/com.dev.daily-decisions.plist \
                                                  "$HOME/Library/LaunchAgents/com.dev.daily-decisions.plist"
 
+echo "== Automation (x-draft-factory — nightly X content drafts) =="
+link home/.local/bin/x-draft-factory.py          "$HOME/.local/bin/x-draft-factory.py"
+link home/Library/LaunchAgents/com.dev.x-draft-factory.plist \
+                                                 "$HOME/Library/LaunchAgents/com.dev.x-draft-factory.plist"
+
 echo
 echo "Done. Backups (if any) under: $BACKUP"
-echo "NOTE: after install, load the daily-decisions schedule once:"
+echo "NOTE: after install, load the schedules once:"
 echo "  launchctl bootstrap gui/\$(id -u) ~/Library/LaunchAgents/com.dev.daily-decisions.plist"
+echo "  launchctl bootstrap gui/\$(id -u) ~/Library/LaunchAgents/com.dev.x-draft-factory.plist"
+echo "See CONTENT.md for the content stack + morning workflow."
 echo "NOTE: machine-local secrets are NOT managed here — recreate per machine:"
 echo "  • ~/.codex/auth.json                     (run Codex login)"
 echo "  • ~/.claude/settings.local.json          (re-add any local model tokens)"
