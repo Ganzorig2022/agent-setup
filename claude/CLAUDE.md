@@ -48,6 +48,7 @@ Rule of thumb: need isolation, independence, or parallelism → agent. Need a ch
 - Preserve project conventions unless asked to change them
 - Do not review code without inspecting the actual diff
 - Research local patterns + official docs before inventing; reuse over rebuild for auth, payments, uploads, webhooks, integrations
+- Before a non-trivial task (esp. QPay work), proactively query the `qmd` knowledge base (`mcp__qmd__query`) for prior decisions, patterns, and gotchas, and factor them in — it holds the auto-harvested decision log + engineering notes. Skip for trivial one-liners; don't announce when it returns nothing relevant.
 
 ## Coding Rules
 - Prefer immutable updates; never mutate function inputs, shared state, or caller-owned data
