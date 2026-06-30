@@ -108,11 +108,20 @@ link home/.local/bin/qpay-gem-harvest.py         "$HOME/.local/bin/qpay-gem-harv
 link home/Library/LaunchAgents/com.dev.x-draft-factory.plist \
                                                  "$HOME/Library/LaunchAgents/com.dev.x-draft-factory.plist"
 
+echo "== Automation (tech-brief — 8am AI/dev news + X-feed digest) =="
+link home/.local/bin/tech-brief.py               "$HOME/.local/bin/tech-brief.py"
+link home/.local/bin/x-harvest.py                "$HOME/.local/bin/x-harvest.py"
+link home/Library/LaunchAgents/com.dev.tech-brief.plist \
+                                                 "$HOME/Library/LaunchAgents/com.dev.tech-brief.plist"
+# One-time after install: log the X-only Chrome profile into X so the headless
+# 8am harvest has a session:  x-harvest.py --login
+
 echo
 echo "Done. Backups (if any) under: $BACKUP"
 echo "NOTE: after install, load the schedules once:"
 echo "  launchctl bootstrap gui/\$(id -u) ~/Library/LaunchAgents/com.dev.daily-decisions.plist"
 echo "  launchctl bootstrap gui/\$(id -u) ~/Library/LaunchAgents/com.dev.x-draft-factory.plist"
+echo "  launchctl bootstrap gui/\$(id -u) ~/Library/LaunchAgents/com.dev.tech-brief.plist"
 echo "See CONTENT.md for the content stack + morning workflow."
 echo "NOTE: machine-local secrets are NOT managed here — recreate per machine:"
 echo "  • ~/.codex/auth.json                     (run Codex login)"
