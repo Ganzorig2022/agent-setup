@@ -32,6 +32,8 @@ Do not assume Claude is always the planner.
 Do not assume Codex is always the executor.
 When receiving a handoff plan, follow it precisely unless it conflicts with repository reality.
 
+Before a non-trivial task (especially QPay work), query the `qmd` knowledge-base MCP server (its `query`/`get` tools) for prior decisions, patterns, and gotchas, and factor them in — it holds the auto-harvested decision log plus engineering notes. Skip for trivial one-liners; proceed normally and silently if it returns nothing relevant.
+
 ## Planning Gate
 
 Create an implementation plan before editing files when the task involves any of the following:

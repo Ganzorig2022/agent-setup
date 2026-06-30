@@ -2,3 +2,4 @@
 - Keep diffs small.
 - Follow current project patterns.
 - Explain changes briefly after editing.
+- Before a non-trivial task, query the `qmd` MCP knowledge base (query/get tools) for prior decisions and patterns and factor them in; proceed normally if it returns nothing relevant.
