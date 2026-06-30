@@ -76,6 +76,7 @@ If a user provides a handoff plan, first verify it against repository reality. I
 - Validate changes with the most relevant available commands.
 - If validation cannot be run, explain why.
 - Do not use destructive commands unless explicitly requested or clearly required and safe.
+- For GitHub work (issues, PRs, comments, workflow/CI runs, releases) use `gh-axi` as the go-to tool — it is the shared standard across all agents (Claude, Codex, OpenCode), not just a `gh` substitute. Prefer compact structured output and targeted queries over full logs/JSON dumps.
 
 ## Code Standards
 
