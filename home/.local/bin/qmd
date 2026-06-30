@@ -1,0 +1,17 @@
+#!/usr/bin/env bash
+# Stable entrypoint for qmd, so MCP configs (Claude, Hermes, Codex, OpenCode)
+# and the daily-decisions job never hardcode an nvm-versioned path that breaks
+# on a Node upgrade. Resolves the newest nvm-installed qmd and runs it with that
+# Node version's bin on PATH (so its shebang resolves regardless of active Node).
+#
+# If you switch Node versions, just reinstall qmd globally for the new version:
+#   npm i -g @tobilu/qmd
+# This shim then picks it up automatically — no config changes anywhere.
+set -euo pipefail
+qmd_bin="$(ls -1 "$HOME/.nvm/versions/node"/*/bin/qmd 2>/dev/null | sort -V | tail -1)"
+if [ -z "${qmd_bin:-}" ] || [ ! -x "$qmd_bin" ]; then
+  echo "qmd shim: qmd not found under ~/.nvm — run: npm i -g @tobilu/qmd" >&2
+  exit 127
+fi
+export PATH="$(dirname "$qmd_bin"):${PATH:-}"
+exec "$qmd_bin" "$@"

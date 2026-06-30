@@ -95,8 +95,17 @@ link opencode/opencode.json       "$HOME/.config/opencode/opencode.json"
 echo "== home =="
 link home/AGENTS.md               "$HOME/AGENTS.md"
 
+echo "== Automation (daily-decisions memory harvester) =="
+link home/.local/bin/daily-decisions.sh         "$HOME/.local/bin/daily-decisions.sh"
+link home/.local/bin/daily-decisions-harvest.py "$HOME/.local/bin/daily-decisions-harvest.py"
+link home/.local/bin/qmd                         "$HOME/.local/bin/qmd"   # stable qmd shim
+link home/Library/LaunchAgents/com.dev.daily-decisions.plist \
+                                                 "$HOME/Library/LaunchAgents/com.dev.daily-decisions.plist"
+
 echo
 echo "Done. Backups (if any) under: $BACKUP"
+echo "NOTE: after install, load the daily-decisions schedule once:"
+echo "  launchctl bootstrap gui/\$(id -u) ~/Library/LaunchAgents/com.dev.daily-decisions.plist"
 echo "NOTE: machine-local secrets are NOT managed here — recreate per machine:"
 echo "  • ~/.codex/auth.json                     (run Codex login)"
 echo "  • ~/.claude/settings.local.json          (re-add any local model tokens)"
