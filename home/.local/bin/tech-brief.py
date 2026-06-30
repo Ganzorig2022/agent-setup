@@ -148,6 +148,26 @@ def x_digest(posts_by_handle: dict) -> str:
     return "\n".join(lines)
 
 
+def tg_chunks(text: str, limit: int = 4000) -> list[str]:
+    """Split text into <=limit-char pieces at line boundaries so a long brief
+    survives Telegram's 4096-char per-message cap (instead of being truncated).
+    A single over-long line is hard-split as a fallback."""
+    chunks, cur = [], ""
+    for line in text.split("\n"):
+        while len(line) > limit:                 # pathological single long line
+            if cur:
+                chunks.append(cur); cur = ""
+            chunks.append(line[:limit]); line = line[limit:]
+        add = f"{cur}\n{line}" if cur else line
+        if len(add) > limit:
+            chunks.append(cur); cur = line
+        else:
+            cur = add
+    if cur:
+        chunks.append(cur)
+    return chunks
+
+
 def deliver(date: str, brief: str) -> pathlib.Path:
     OUT_DIR.mkdir(parents=True, exist_ok=True)
     note = OUT_DIR / f"{date}.md"
@@ -169,16 +189,21 @@ def deliver(date: str, brief: str) -> pathlib.Path:
             elif line.startswith("TELEGRAM_CHAT_ID="):
                 chat = line.split("=", 1)[1].strip()
     if tok and chat:
-        try:
-            import json
-            data = json.dumps({"chat_id": chat, "text": f"📡 Tech Brief — {date}\n\n{brief}"[:4000],
-                               "disable_web_page_preview": True}).encode()
-            r = urllib.request.Request(f"https://api.telegram.org/bot{tok}/sendMessage",
-                                       data=data, headers={"Content-Type": "application/json"})
-            urllib.request.urlopen(r, timeout=15)
-            log("sent to Telegram")
-        except Exception as e:
-            log(f"telegram send failed: {e}")
+        import json
+        full = f"📡 Tech Brief — {date}\n\n{brief}"
+        parts = tg_chunks(full, 4000)
+        for i, part in enumerate(parts, 1):
+            try:
+                data = json.dumps({"chat_id": chat, "text": part,
+                                   "disable_web_page_preview": True}).encode()
+                r = urllib.request.Request(f"https://api.telegram.org/bot{tok}/sendMessage",
+                                           data=data, headers={"Content-Type": "application/json"})
+                urllib.request.urlopen(r, timeout=15)
+            except Exception as e:
+                log(f"telegram send failed (part {i}/{len(parts)}): {e}")
+                break
+        else:
+            log(f"sent to Telegram ({len(parts)} message{'s' if len(parts) > 1 else ''})")
     return note
 
 
