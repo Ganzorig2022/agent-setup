@@ -89,7 +89,10 @@ link codex/rules/lessons.md       "$HOME/.codex/rules/lessons.md"
 seed codex/config.template.toml   "$HOME/.codex/config.toml"   # copy-if-absent (Codex owns this file)
 
 echo "== OpenCode =="
-link opencode/skills              "$HOME/.config/opencode/skills"
+# Keep the live dir REAL and reproduce each entry (like Claude/Codex): the shared
+# skills are relative symlinks (../../../.agents/skills/* — one level deeper than
+# ~/.claude, ~/.codex). A whole-dir symlink would resolve those against the repo and dangle.
+link_skills opencode/skills       "$HOME/.config/opencode/skills"
 link opencode/opencode.json       "$HOME/.config/opencode/opencode.json"
 
 echo "== home =="
