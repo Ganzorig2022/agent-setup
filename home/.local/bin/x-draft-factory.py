@@ -74,7 +74,7 @@ footer{display:flex;justify-content:space-between;align-items:center;margin-top:
 <div class="beats">{BEATS}
 <div class="takeaway">{TAKEAWAY}</div>
 </div>
-<footer><span class="mark"><span class="dot"></span>{HANDLE}</span><span>built with Claude · Codex · OpenCode</span></footer>
+<footer><span class="mark"><span class="dot"></span>{HANDLE}</span></footer>
 </div></body></html>"""
 
 
