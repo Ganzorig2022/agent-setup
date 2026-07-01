@@ -36,6 +36,17 @@ WINDOW_H = 36          # how recent an item must be
 MAX_PER_FEED = 15
 HARVEST_TIMEOUT = 480  # overall cap for the inline X harvest (best-effort)
 
+# Who the reply-opportunities coach is writing for. Drives the "Reply opportunities"
+# growth section — keep this in sync with the account's positioning.
+NICHE = (
+    "@n_ganzo is an AI builder (former geologist, Ulaanbaatar) building an autonomous "
+    "multi-agent stack — Claude + Codex + OpenCode + local/offline models — on ~$50/mo of "
+    "subscriptions with NO API bills: persistent cross-agent memory, a nightly knowledge "
+    "harvester, and this very morning brief. Angle: autonomous agents on a budget, "
+    "local models, build-in-public. Voice: honest over hype, concrete, real numbers, no "
+    "fluff, minimal emoji."
+)
+
 FEEDS = [
     "https://hnrss.org/frontpage?points=50",
     "https://hnrss.org/newest?q=AI+OR+LLM+OR+Anthropic+OR+OpenAI+OR+Claude+OR+agent&points=30",
@@ -168,6 +179,34 @@ def tg_chunks(text: str, limit: int = 4000) -> list[str]:
     return chunks
 
 
+def reply_opportunities(x_posts: dict) -> str:
+    """Growth pass: from the harvested X posts, pick the best reply targets for
+    audience growth and draft a ready-to-send reply for each in @n_ganzo's voice.
+    Reuses the already-harvested cache — no extra scraping."""
+    xd = x_digest(x_posts)
+    if not xd:
+        return "## Reply opportunities\n(no X posts available today)"
+    prompt = (
+        "You are a growth strategist for an AI-builder X (Twitter) account. " + NICHE + " "
+        "At ~37 followers, his fastest growth path is thoughtful REPLIES to large accounts — "
+        "adding a real data point, his own concrete result, or a sharp question (NEVER generic "
+        "praise). From the recent posts by large AI accounts below, pick the 3-5 BEST reply "
+        "targets — posts where his budget / local-model / multi-agent-memory angle genuinely "
+        "adds value. Output ONLY a markdown section titled exactly '## Reply opportunities'. "
+        "For each target: a bold one-line reason it's worth replying, the @handle + the bare "
+        "link, then a ready-to-send draft reply (<280 chars, his voice, specific, no hashtags). "
+        "Skip posts where he'd add nothing. No preamble."
+    )
+    try:
+        res = subprocess.run([str(CLAUDE), "-p", prompt], input=xd,
+                             capture_output=True, text=True, timeout=300)
+        out = res.stdout.strip()
+        return out if len(out) > 30 else "## Reply opportunities\n(nothing strong to reply to today)"
+    except Exception as e:
+        log(f"reply-opportunities failed: {e}")
+        return "## Reply opportunities\n(generation failed — see log)"
+
+
 def deliver(date: str, brief: str) -> pathlib.Path:
     OUT_DIR.mkdir(parents=True, exist_ok=True)
     note = OUT_DIR / f"{date}.md"
@@ -269,6 +308,10 @@ def main() -> int:
     if len(brief) < 50:
         log(f"empty brief; raw: {brief[:200]!r}")
         return 1
+    # Growth section: daily reply targets from the same X harvest (no extra scraping).
+    replies = reply_opportunities(x_posts)
+    log(f"reply-opportunities: {len(replies)} chars")
+    brief = f"{brief}\n\n---\n\n{replies}"
     note = deliver(date, brief)
     log(f"delivered -> {note}")
     print(f"brief -> {note}")
