@@ -1,0 +1,6 @@
+interface:
+  display_name: "QPay File Upload Security"
+  short_description: "Harden QPay file upload boundaries"
+  default_prompt: "Use $qpay-file-upload-security to harden or review a QPay file upload boundary."
+policy:
+  allow_implicit_invocation: true

@@ -1,0 +1,6 @@
+interface:
+  display_name: "QPay Micro Smoke"
+  short_description: "Smoke-test QPay microservice routes"
+  default_prompt: "Use $qpay-micro-smoke to create or debug a QPay microservice smoke test."
+policy:
+  allow_implicit_invocation: true
