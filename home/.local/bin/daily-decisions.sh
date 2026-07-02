@@ -5,8 +5,9 @@
 set -uo pipefail
 
 export HOME="/Users/dev"
-NODE_BIN="/Users/dev/.nvm/versions/node/v22.21.1/bin"
-export PATH="$HOME/.local/bin:$NODE_BIN:/usr/bin:/bin:/usr/sbin:/sbin"
+# Resolve the newest nvm-installed Node at runtime — a version upgrade must not break this job.
+NODE_BIN="$(ls -d "$HOME"/.nvm/versions/node/*/bin 2>/dev/null | sort -V | tail -1)"
+export PATH="$HOME/.local/bin${NODE_BIN:+:$NODE_BIN}:/usr/bin:/bin:/usr/sbin:/sbin"
 
 CLAUDE="$HOME/.local/bin/claude"
 QMD="$HOME/.local/bin/qmd"   # stable shim — survives Node version changes

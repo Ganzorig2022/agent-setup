@@ -5,18 +5,23 @@ Reads the user's knowledge vault, asks headless `claude` to draft a few build-in
 posts in their brand voice, fills the proven artifact template with the AI-written content,
 renders clean PNGs via headless Chrome, and drops a review packet on the Desktop.
 
-Human-in-the-loop by design: this only DRAFTS. The user reviews, approves, and schedules
-(via X's native scheduler). Nothing is ever posted automatically.
+Auto-post (added 2026-07-02): a second, cold self-review pass re-checks every draft
+against the confidentiality rules and picks the single strongest SAFE one; that draft is
+queued (queue.json) for x-post.py to publish at its target window. The other drafts stay
+manual options in the review packet. Kill switch: touch ~/Desktop/x-drafts/.no-auto-post
+(x-post.py goes inert; everything reverts to review-and-schedule-by-hand).
 """
 from __future__ import annotations
 import datetime
 import glob
 import html as html_lib
+import json
 import os
 import pathlib
 import re
 import subprocess
 import sys
+import zoneinfo
 
 HOME = pathlib.Path.home()
 CLAUDE = HOME / ".local/bin/claude"
@@ -197,6 +202,80 @@ def parse_drafts(text: str) -> list[dict]:
     return drafts
 
 
+REVIEW_PROMPT = f"""You are a cold, strict pre-publication reviewer for {HANDLE}'s X account.
+The drafts below were machine-written from work notes and the winner will be POSTED
+AUTOMATICALLY with no human review. Judge each draft:
+
+1. CONFIDENTIALITY (hard veto): reject any draft that names or implies an employer,
+   company/product/brand, internal repo/service/table names, proprietary architecture,
+   or payment/settlement internals. General transferable techniques and the author's
+   own personal tooling are fine.
+2. QUALITY (default: post NOTHING): the account's reputation is built on substance, not
+   cadence — a mediocre post costs more than a silent day. Approve a draft ONLY if it
+   (a) makes a specific, differentiated claim with a real number or named tool,
+   (b) teaches something a senior developer would bookmark, and
+   (c) could not have been written by someone who merely reads AI news.
+   Generic tips, restated common knowledge, or thin daily increments = reject all.
+   Expect to approve something roughly 2-3 times a WEEK, not daily.
+
+Pick the single BEST draft that passes both, or none — none is the normal outcome.
+Output EXACTLY one JSON object, nothing else: {{"post": <1-based draft number or null>,
+"why": "<one line>"}}"""
+
+
+def pick_best(drafts: list[dict]) -> tuple[int | None, str]:
+    """Cold self-review: returns (0-based index of the draft to auto-post, reason),
+    or (None, reason). Any failure means nothing is auto-posted — fail closed."""
+    listing = []
+    for i, d in enumerate(drafts, 1):
+        beats = " / ".join(t for t, _ in d["beats"])
+        listing.append(f"--- DRAFT {i} (window {d['window']}) ---\n"
+                       f"CAPTION:\n{d['caption']}\n"
+                       f"CARD: {d['eyebrow']} | {d['hook']} | {d['sub']} | {beats} | {d['takeaway']}")
+    try:
+        res = subprocess.run([str(CLAUDE), "-p", REVIEW_PROMPT], input="\n\n".join(listing),
+                             capture_output=True, text=True, timeout=300)
+        m = re.search(r"\{.*\}", res.stdout, re.S)
+        verdict = json.loads(m.group(0)) if m else {}
+        n, why = verdict.get("post"), str(verdict.get("why", ""))[:200]
+        if isinstance(n, int) and 1 <= n <= len(drafts):
+            return n - 1, why
+        return None, why or "reviewer passed on all drafts"
+    except Exception as e:
+        log(f"self-review failed: {e}")
+        return None, f"self-review failed ({e}) — nothing queued"
+
+
+WINDOW_HOURS = {"9am ET": 9, "12pm ET": 12, "6pm ET": 18}
+
+
+def window_to_post_at(window: str, run_date: datetime.date) -> str:
+    """Local ISO time for an ET posting window on the factory's run date.
+    DST-proof: computed in America/New_York, converted to local."""
+    hour = WINDOW_HOURS.get(window.strip(), 9)
+    et = datetime.datetime(run_date.year, run_date.month, run_date.day, hour,
+                           tzinfo=zoneinfo.ZoneInfo("America/New_York"))
+    return et.astimezone().isoformat(timespec="seconds")
+
+
+def queue_post(date: str, d: dict, png_path: pathlib.Path) -> str:
+    """Append the chosen draft to the queue x-post.py drains. Returns post_at."""
+    qfile = HOME / "Desktop/x-drafts/queue.json"
+    try:
+        queue = json.loads(qfile.read_text()) if qfile.exists() else []
+    except Exception:
+        queue = []
+    post_at = window_to_post_at(d["window"], datetime.date.fromisoformat(date))
+    entry_id = f"{date}-{png_path.stem}"
+    if any(e.get("id") == entry_id for e in queue):
+        return post_at  # already queued (re-run with --force)
+    queue.append({"id": entry_id, "date": date, "window": d["window"], "post_at": post_at,
+                  "caption": d["caption"], "png": str(png_path), "status": "pending", "detail": ""})
+    queue = queue[-60:]  # keep ~2 months of history for the brief's confirmations
+    qfile.write_text(json.dumps(queue, ensure_ascii=False, indent=1))
+    return post_at
+
+
 def render_png(html_path: pathlib.Path, png_path: pathlib.Path) -> bool:
     try:
         subprocess.run(
@@ -247,16 +326,35 @@ def main() -> int:
         log(f"no drafts parsed; raw head: {res.stdout[:400]!r}")
         return 1
 
-    review = [f"# X drafts — {date}\n",
-              "_Auto-drafted while you slept. Review, tweak, then schedule the good ones "
-              "via X's native scheduler (calendar icon in the composer). Nothing was posted._\n"]
+    rendered = []
     for i, d in enumerate(drafts, 1):
         html_path = out / f"draft{i}.html"
         png_path = out / f"draft{i}.png"
         html_path.write_text(build_html(d))
-        ok = render_png(html_path, png_path)
+        rendered.append((d, png_path, render_png(html_path, png_path)))
+
+    # Cold self-review picks the one draft safe+strong enough to auto-post.
+    best, why = pick_best(drafts)
+    post_at = ""
+    if best is not None and not rendered[best][2]:
+        best, why = None, "winner's card failed to render — nothing queued"
+    if best is not None:
+        post_at = queue_post(date, drafts[best], rendered[best][1])
+        log(f"queued draft{best + 1} for {post_at} ({why})")
+    else:
+        log(f"nothing queued: {why}")
+
+    review = [f"# X drafts — {date}\n",
+              (f"_Auto-drafted while you slept. **Draft {best + 1} is queued to auto-post "
+               f"at {post_at}** ({why}). The others are manual options — schedule via X's "
+               "native scheduler. Kill switch: `touch ~/Desktop/x-drafts/.no-auto-post`._\n"
+               if best is not None else
+               f"_Auto-drafted while you slept. **Nothing queued for auto-post** ({why}). "
+               "Review and schedule manually via X's native scheduler._\n")]
+    for i, (d, png_path, ok) in enumerate(rendered, 1):
+        tag = "  🚀 QUEUED FOR AUTO-POST" if best is not None and i == best + 1 else ""
         review += [
-            f"\n## Draft {i} — suggested window: {d['window']}\n",
+            f"\n## Draft {i} — suggested window: {d['window']}{tag}\n",
             "**Caption** (copy-paste):\n```\n" + d["caption"] + "\n```",
             f"**Image:** `{png_path.name}`" + ("" if ok else "  ⚠️ render failed"),
             "\n---",

@@ -13,6 +13,7 @@ from __future__ import annotations
 import datetime
 import email.utils
 import html
+import json
 import pathlib
 import re
 import subprocess
@@ -179,32 +180,113 @@ def tg_chunks(text: str, limit: int = 4000) -> list[str]:
     return chunks
 
 
-def reply_opportunities(x_posts: dict) -> str:
+def reply_opportunities(x_posts: dict) -> list[dict]:
     """Growth pass: from the harvested X posts, pick the best reply targets for
     audience growth and draft a ready-to-send reply for each in @n_ganzo's voice.
+    Returns structured targets [{handle, link, reason, reply}] for the auto-poster.
     Reuses the already-harvested cache — no extra scraping."""
     xd = x_digest(x_posts)
     if not xd:
-        return "## Reply opportunities\n(no X posts available today)"
+        return []
     prompt = (
         "You are a growth strategist for an AI-builder X (Twitter) account. " + NICHE + " "
         "At ~37 followers, his fastest growth path is thoughtful REPLIES to large accounts — "
         "adding a real data point, his own concrete result, or a sharp question (NEVER generic "
         "praise). From the recent posts by large AI accounts below, pick the 3-5 BEST reply "
         "targets — posts where his budget / local-model / multi-agent-memory angle genuinely "
-        "adds value. Output ONLY a markdown section titled exactly '## Reply opportunities'. "
-        "For each target: a bold one-line reason it's worth replying, the @handle + the bare "
-        "link, then a ready-to-send draft reply (<280 chars, his voice, specific, no hashtags). "
-        "Skip posts where he'd add nothing. No preamble."
+        "adds value. These replies are POSTED AUTOMATICALLY with no human review, so only "
+        "include a target if the reply is safe, on-voice, and specific; skip posts where he'd "
+        "add nothing. Output ONLY a JSON array (no markdown, no code fences): each element "
+        '{"handle": "@name", "link": "https://x.com/.../status/...", '
+        '"reason": "<one line why this target>", "reply": "<the reply, <280 chars, his voice, '
+        'specific, no hashtags>"}. Output [] if nothing is strong today.'
     )
     try:
         res = subprocess.run([str(CLAUDE), "-p", prompt], input=xd,
                              capture_output=True, text=True, timeout=300)
         out = res.stdout.strip()
-        return out if len(out) > 30 else "## Reply opportunities\n(nothing strong to reply to today)"
+        m = re.search(r"\[.*\]", out, re.S)  # tolerate stray prose/fences around the array
+        targets = json.loads(m.group(0)) if m else []
+        return [t for t in targets if isinstance(t, dict) and t.get("link") and t.get("reply")]
     except Exception as e:
         log(f"reply-opportunities failed: {e}")
-        return "## Reply opportunities\n(generation failed — see log)"
+        return []
+
+
+def auto_reply(targets: list[dict]) -> list[dict]:
+    """Post the drafted replies via x-reply.py (headless, logged-in profile).
+    Best-effort: any failure marks targets failed so the brief reports them
+    as manual drafts instead of blocking delivery."""
+    if not targets:
+        return targets
+    poster = HOME / ".local/bin/x-reply.py"
+    if not poster.exists():
+        for t in targets:
+            t["status"], t["detail"] = "failed", "x-reply.py missing"
+        return targets
+    try:
+        res = subprocess.run([sys.executable, str(poster)],
+                             input=json.dumps(targets, ensure_ascii=False),
+                             capture_output=True, text=True, timeout=1200)
+        return json.loads(res.stdout.strip() or "[]") or targets
+    except Exception as e:
+        log(f"auto-reply failed: {e}")
+        for t in targets:
+            t.setdefault("status", "failed")
+            t.setdefault("detail", f"poster error: {e}")
+        return targets
+
+
+def render_replies(targets: list[dict]) -> str:
+    """Confirmation section for the brief: what was auto-replied, what needs a hand."""
+    if not targets:
+        return "## Replies posted\n(nothing strong to reply to today)"
+    lines = ["## Replies posted"]
+    for i, t in enumerate(targets, 1):
+        h, link = t.get("handle", "?"), t.get("link", "")
+        reply, reason = t.get("reply", ""), t.get("reason", "")
+        status, detail = t.get("status", "failed"), t.get("detail", "")
+        if status == "posted":
+            head = f"{i}. ✅ Replied to {h} — {reason}"
+        elif status == "skipped":
+            head = f"{i}. ⏭️ Skipped {h} ({detail})"
+        else:
+            head = f"{i}. ⚠️ FAILED {h} ({detail}) — post manually:"
+        lines += [head, f"   {link}", f"   > {reply}"]
+    return "\n".join(lines)
+
+
+def render_published() -> str:
+    """Confirmation of x-draft-factory auto-posts (see x-post.py) from the last 24h,
+    so the morning brief shows what went out overnight at the ET windows."""
+    qfile = HOME / "Desktop/x-drafts/queue.json"
+    try:
+        queue = json.loads(qfile.read_text()) if qfile.exists() else []
+    except Exception:
+        return ""
+    cutoff = datetime.datetime.now().astimezone() - datetime.timedelta(hours=24)
+    lines = []
+    for e in queue:
+        stamp = e.get("posted_at") or e.get("post_at") or ""
+        try:
+            when = datetime.datetime.fromisoformat(stamp)
+        except Exception:
+            continue
+        if when < cutoff or e.get("status") == "pending":
+            continue
+        first = (e.get("caption") or "").split("\n")[0][:80]
+        if e.get("status") == "posted":
+            lines.append(f"- ✅ Posted ({e.get('window', '?')}): “{first}…” — {e.get('png', '')}")
+        else:
+            lines.append(f"- ⚠️ {e.get('status', '?').upper()} ({e.get('detail', '')}): “{first}…” "
+                         f"— still in ~/Desktop/x-drafts/{e.get('date', '')}/ for manual posting")
+    pending = [e for e in queue if e.get("status") == "pending"]
+    for e in pending[-2:]:
+        first = (e.get("caption") or "").split("\n")[0][:80]
+        lines.append(f"- ⏳ Queued for {e.get('post_at', '?')}: “{first}…”")
+    if not lines:
+        return ""
+    return "## Posts published (auto)\n" + "\n".join(lines)
 
 
 def deliver(date: str, brief: str) -> pathlib.Path:
@@ -308,10 +390,17 @@ def main() -> int:
     if len(brief) < 50:
         log(f"empty brief; raw: {brief[:200]!r}")
         return 1
-    # Growth section: daily reply targets from the same X harvest (no extra scraping).
-    replies = reply_opportunities(x_posts)
-    log(f"reply-opportunities: {len(replies)} chars")
-    brief = f"{brief}\n\n---\n\n{replies}"
+    # Growth section: draft reply targets from the same X harvest, auto-post them,
+    # and fold the confirmations into the brief. Kill switch: touch .no-auto-reply.
+    targets = reply_opportunities(x_posts)
+    log(f"reply-opportunities: {len(targets)} targets")
+    targets = auto_reply(targets)
+    posted = sum(1 for t in targets if t.get("status") == "posted")
+    log(f"auto-reply: {posted}/{len(targets)} posted")
+    brief = f"{brief}\n\n---\n\n{render_replies(targets)}"
+    published = render_published()
+    if published:
+        brief = f"{brief}\n\n{published}"
     note = deliver(date, brief)
     log(f"delivered -> {note}")
     print(f"brief -> {note}")
