@@ -16,9 +16,10 @@ DEFENSE = (HOME / ".claude/prompt-defense.md").read_text().strip()
 
 # skip bug-hunter + security-reviewer: already in sync with their .md sources
 AGENTS = [
-    "architect", "build-error-resolver", "code-reviewer", "doc-updater",
-    "e2e-runner", "goal-verifier", "planner", "react-reviewer",
-    "refactor-cleaner", "tdd-guide", "typescript-reviewer",
+    "architect", "build-error-resolver", "code-reviewer", "database-reviewer",
+    "doc-updater", "e2e-runner", "flutter-reviewer", "goal-verifier",
+    "performance-optimizer", "planner", "react-reviewer", "refactor-cleaner",
+    "silent-failure-hunter", "tdd-guide", "typescript-reviewer",
 ]
 
 NEW_AGENT_DEFAULTS = {
@@ -26,6 +27,26 @@ NEW_AGENT_DEFAULTS = {
         "model_reasoning_effort": "high",
         "sandbox_mode": "read-only",
         "nickname_candidates": '["goal verifier", "goal_verifier", "verifier"]',
+    },
+    "database-reviewer": {
+        "model_reasoning_effort": "high",
+        "sandbox_mode": "read-only",
+        "nickname_candidates": '["database reviewer", "database_reviewer", "db reviewer"]',
+    },
+    "performance-optimizer": {
+        "model_reasoning_effort": "high",
+        "sandbox_mode": "read-only",
+        "nickname_candidates": '["performance optimizer", "performance_optimizer", "perf"]',
+    },
+    "silent-failure-hunter": {
+        "model_reasoning_effort": "high",
+        "sandbox_mode": "read-only",
+        "nickname_candidates": '["silent failure hunter", "silent_failure_hunter", "silent failures"]',
+    },
+    "flutter-reviewer": {
+        "model_reasoning_effort": "high",
+        "sandbox_mode": "read-only",
+        "nickname_candidates": '["flutter reviewer", "flutter_reviewer", "dart reviewer"]',
     },
 }
 

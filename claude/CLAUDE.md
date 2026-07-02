@@ -15,6 +15,11 @@ Self-invoked checklist — not automatic. When a trigger below matches, I should
 |---------|-------|
 | Complex feature / refactor / migration / architecture | `planner` or `architect` |
 | Code written or modified | `code-reviewer` |
+| Dart/Flutter code written or modified | `flutter-reviewer` |
+| Migration / schema change / raw SQL / Sequelize models, transactions, indexes | `database-reviewer` |
+| Error handling touched — catch blocks, fallbacks, retries, webhook acks | `silent-failure-hunter` |
+| Something is slow — endpoint latency, N+1, bundle size, memory growth | `performance-optimizer` |
+| Bug sweep of an existing/inherited area (NOT a diff) / pre-refactor audit | `bug-hunter` (via `/hunt-bugs`) |
 | Task or loop iteration complete — did we achieve the goal? | `goal-verifier` |
 | Auth / secrets / payments / user input / uploads / webhooks | `security-reviewer` |
 | Build / typecheck / bundler / CI fails | `build-error-resolver` |
