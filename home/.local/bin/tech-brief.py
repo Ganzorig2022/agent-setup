@@ -160,6 +160,29 @@ def x_digest(posts_by_handle: dict) -> str:
     return "\n".join(lines)
 
 
+def md_to_tg_html(md: str) -> str:
+    """Convert the brief's markdown to Telegram HTML (parse_mode=HTML) so it
+    renders readable in the chat: bold headers/emphasis, monospace code, clean
+    separators. All conversions are line-local so chunking never splits a tag."""
+    out = []
+    for line in md.split("\n"):
+        s = line.replace("&", "&amp;").replace("<", "&lt;").replace(">", "&gt;")
+        m = re.match(r"^(#{1,3})\s+(.*)$", s)
+        if m:
+            out.append(f"<b>{m.group(2).strip()}</b>")
+            continue
+        if s.strip() == "---":
+            out.append("—————————")
+            continue
+        stripped = s.lstrip()
+        if stripped.startswith("&gt; "):  # blockquote lines (drafted replies/captions)
+            s = s[:len(s) - len(stripped)] + "<i>" + stripped[5:] + "</i>"
+        s = re.sub(r"\*\*(.+?)\*\*", r"<b>\1</b>", s)
+        s = re.sub(r"`([^`]+)`", r"<code>\1</code>", s)
+        out.append(s)
+    return "\n".join(out)
+
+
 def tg_chunks(text: str, limit: int = 4000) -> list[str]:
     """Split text into <=limit-char pieces at line boundaries so a long brief
     survives Telegram's 4096-char per-message cap (instead of being truncated).
@@ -339,19 +362,29 @@ def deliver(date: str, brief: str) -> pathlib.Path:
             elif line.startswith("TELEGRAM_CHAT_ID="):
                 chat = line.split("=", 1)[1].strip()
     if tok and chat:
-        import json
-        full = f"📡 Tech Brief — {date}\n\n{brief}"
+        full = f"<b>📡 Tech Brief — {date}</b>\n\n{md_to_tg_html(brief)}"
         parts = tg_chunks(full, 4000)
+
+        def tg_send(text: str, mode: str | None) -> bool:
+            payload = {"chat_id": chat, "text": text, "disable_web_page_preview": True}
+            if mode:
+                payload["parse_mode"] = mode
+            data = json.dumps(payload).encode()
+            r = urllib.request.Request(f"https://api.telegram.org/bot{tok}/sendMessage",
+                                       data=data, headers={"Content-Type": "application/json"})
+            urllib.request.urlopen(r, timeout=15)
+            return True
+
         for i, part in enumerate(parts, 1):
             try:
-                data = json.dumps({"chat_id": chat, "text": part,
-                                   "disable_web_page_preview": True}).encode()
-                r = urllib.request.Request(f"https://api.telegram.org/bot{tok}/sendMessage",
-                                           data=data, headers={"Content-Type": "application/json"})
-                urllib.request.urlopen(r, timeout=15)
+                tg_send(part, "HTML")
             except Exception as e:
-                log(f"telegram send failed (part {i}/{len(parts)}): {e}")
-                break
+                log(f"telegram HTML send failed (part {i}/{len(parts)}): {e}; retrying plain")
+                try:
+                    tg_send(re.sub(r"</?(b|i|code|pre)>", "", part), None)
+                except Exception as e2:
+                    log(f"telegram plain send failed (part {i}/{len(parts)}): {e2}")
+                    break
         else:
             log(f"sent to Telegram ({len(parts)} message{'s' if len(parts) > 1 else ''})")
     return note
