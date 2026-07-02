@@ -10,9 +10,10 @@ general rules in `rules/common/`; this file is for cross-cutting tooling/workflo
   rules, this file). Hand-edit the markdown; leave the sqlite stores to the runtime.
 
 ## Cross-tool source-of-truth
-- Reviewer agents are mirrored across tools: `~/.codex/agents/*.toml` are ports of
-  `~/.claude/agents/*.md`. The Claude `.md` is the source of truth — when a reviewer prompt
-  changes, edit the Claude `.md` first, then sync the `.toml` body (keep its
-  `## Codex Compatibility` footer last). See QPay/AGENTS.md "Review layer".
+- Agent `.toml`s are mirrored across tools: `~/.codex/agents/*.toml` are regenerated wholesale
+  from `~/.claude/agents/*.md` (Claude `.md` = source of truth) — do not hand-edit a ported
+  `.toml`; edits are overwritten on resync (agent-setup/scripts/resync-codex-agents.py).
+  Likewise `rules/qpay/*.md` are byte-identical mirrors of `~/.claude/qpay-context/` — edit the
+  Claude side, then copy. See QPay/AGENTS.md "Review layer".
 - `/Users/dev/QPay/AGENT_GUIDE.md` is the QPay workspace handoff authority for planner →
   implementer → reviewer flows.
