@@ -256,6 +256,35 @@ def render_replies(targets: list[dict]) -> str:
     return "\n".join(lines)
 
 
+def render_growth() -> str:
+    """One-line follower trend from x-harvest's daily snapshot (growth.json) —
+    the scoreboard for the wait-until-EOY audience-building phase."""
+    gfile = CACHE_DIR / "growth.json"
+    try:
+        hist = json.loads(gfile.read_text()) if gfile.exists() else []
+    except Exception:
+        return ""
+    if not hist:
+        return ""
+    cur = hist[-1]
+    n = cur.get("followers")
+    if n is None:
+        return ""
+
+    def at_least_days_ago(days: int):
+        target = datetime.date.today() - datetime.timedelta(days=days)
+        older = [e for e in hist if e.get("date", "9999") <= target.isoformat()
+                 and e.get("followers") is not None]
+        return older[-1]["followers"] if older else None
+
+    parts = [f"📈 {n} followers"]
+    for label, days in (("7d", 7), ("30d", 30)):
+        base = at_least_days_ago(days)
+        if base is not None:
+            parts.append(f"{n - base:+d} {label}")
+    return " · ".join(parts)
+
+
 def render_published() -> str:
     """Confirmation of x-draft-factory auto-posts (see x-post.py) from the last 24h,
     so the morning brief shows what went out overnight at the ET windows."""
@@ -401,6 +430,9 @@ def main() -> int:
     published = render_published()
     if published:
         brief = f"{brief}\n\n{published}"
+    growth = render_growth()
+    if growth:
+        brief = f"{growth}\n\n{brief}"
     note = deliver(date, brief)
     log(f"delivered -> {note}")
     print(f"brief -> {note}")

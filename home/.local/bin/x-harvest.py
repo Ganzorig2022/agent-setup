@@ -158,6 +158,54 @@ def parse_when(s: str):
         return None
 
 
+GROWTH = CACHE_DIR / "growth.json"
+OWN_HANDLE = "n_ganzo"
+
+STATS_JS = r"""(() => {
+  const num = (s) => {
+    s = (s || '').trim().replace(/,/g, '');
+    const m = s.match(/^([\d.]+)([KM]?)/i);
+    if (!m) return null;
+    let v = parseFloat(m[1]);
+    if (/k/i.test(m[2])) v *= 1e3;
+    if (/m/i.test(m[2])) v *= 1e6;
+    return Math.round(v);
+  };
+  const grab = (suffix) => {
+    const a = document.querySelector(`a[href$="${suffix}"]`);
+    return a ? num(a.textContent) : null;
+  };
+  return { followers: grab('/verified_followers'), following: grab('/following') };
+})()"""
+
+
+def track_growth() -> None:
+    """Daily follower snapshot of the account's own profile -> growth.json,
+    so the morning brief can show the trend while the algorithm does its job."""
+    try:
+        axi(["open", f"https://x.com/{OWN_HANDLE}"], OPEN_TIMEOUT)
+        time.sleep(2)
+        res = axi(["eval", STATS_JS], EVAL_TIMEOUT)
+        stats = parse_eval(res.stdout) or {}
+        followers = stats.get("followers")
+        if followers is None:
+            log("growth: could not read follower count")
+            return
+        try:
+            hist = json.loads(GROWTH.read_text()) if GROWTH.exists() else []
+        except Exception:
+            hist = []
+        today = datetime.date.today().isoformat()
+        hist = [e for e in hist if e.get("date") != today]
+        hist.append({"date": today, "followers": followers,
+                     "following": stats.get("following")})
+        CACHE_DIR.mkdir(parents=True, exist_ok=True)
+        GROWTH.write_text(json.dumps(hist[-400:], ensure_ascii=False))
+        log(f"growth: {followers} followers")
+    except Exception as e:
+        log(f"growth tracking failed: {e}")
+
+
 def login() -> int:
     PROFILE.mkdir(parents=True, exist_ok=True)
     print("Opening a visible Chrome window. Log into X, then close the window.")
@@ -202,6 +250,7 @@ def harvest() -> dict:
                 break
         results[h] = keep
         log(f"x {len(keep):2d}  @{h}")
+    track_growth()
     try:
         axi(["stop"], 20)
     except Exception:
