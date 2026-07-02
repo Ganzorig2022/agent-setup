@@ -34,7 +34,7 @@ WINDOW_H = 36            # only keep posts this recent (matches the brief's wind
 MAX_PER_ACCOUNT = 4     # cap posts per account so the digest stays scannable
 OPEN_TIMEOUT = 50       # per-page load budget (s)
 EVAL_TIMEOUT = 30       # per-scrape budget (s)
-TOTAL_BUDGET_S = 420    # overall wall-clock cap; bail out gracefully past this
+TOTAL_BUDGET_S = 600    # overall wall-clock cap; bail out gracefully past this (25 accounts)
 
 # Curated from @n_ganzo's followings — high-signal AI/dev: model releases, agent
 # harnesses, configs/tooling. Edit this list freely; one handle per line.
@@ -54,6 +54,17 @@ HANDLES = [
     "exolabs",          # local / on-device frontier AI
     "pdev110",          # Ollama (local models)
     "davidcrawshaw",    # dev tooling / AI infra
+    # big-name builders (added 2026-07-02, matched from @n_ganzo's following)
+    "bcherny",          # Boris Cherny — Claude Code creator (Anthropic)
+    "trq212",           # Thariq — Anthropic, Claude
+    "ericosiu",         # ericosiu — AI builder
+    "kunchenguid",      # Kun Chen — no-mistakes, agent tooling
+    "Dimillian",        # Thomas Ricouard — iOS/dev, heavy AI-agent user
+    "sudoingX",         # Sudo su — AI/dev
+    "EXM7777",          # Machina — AI agents
+    "melvynx",          # Melvyn — indie builder, dev content
+    "matteocollina",    # Matteo Collina — Node.js TSC / Fastify
+    "chongdashu",       # Chong-U — AI engineering
 ]
 
 # Scrape the visible tweets on a profile page. Runs in the page; returns an array

@@ -35,7 +35,7 @@ LOG = HOME / "Library/Logs/tech-brief.log"
 UA = "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 tech-brief/1.0"
 WINDOW_H = 36          # how recent an item must be
 MAX_PER_FEED = 15
-HARVEST_TIMEOUT = 480  # overall cap for the inline X harvest (best-effort)
+HARVEST_TIMEOUT = 700  # overall cap for the inline X harvest (best-effort; 25 accounts)
 
 # Who the reply-opportunities coach is writing for. Drives the "Reply opportunities"
 # growth section — keep this in sync with the account's positioning.
