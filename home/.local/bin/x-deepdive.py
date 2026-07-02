@@ -20,6 +20,7 @@ import datetime
 import glob
 import importlib.util
 import json
+import os
 import pathlib
 import re
 import subprocess
@@ -153,9 +154,14 @@ def parse_json(text: str, fallback):
 
 
 def notify(date: str, title: str, verdict: str, out: pathlib.Path) -> None:
+    # title is model-generated (untrusted) — never interpolate it into AppleScript
+    # source; pass it out-of-band via the process environment instead.
     try:
         subprocess.run(["osascript", "-e",
-                        f'display notification "{title}" with title "Deep-dive packet {date}"'],
+                        'display notification (system attribute "DD_TITLE") '
+                        'with title (system attribute "DD_HEADING")'],
+                       env={**os.environ, "DD_TITLE": title[:120],
+                            "DD_HEADING": f"Deep-dive packet {date}"},
                        capture_output=True, timeout=10)
     except Exception:
         pass
