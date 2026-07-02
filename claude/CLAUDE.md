@@ -14,8 +14,7 @@ Self-invoked checklist — not automatic. When a trigger below matches, I should
 | Trigger | Agent |
 |---------|-------|
 | Complex feature / refactor / migration / architecture | `planner` or `architect` |
-| Code written or modified | `code-reviewer` |
-| Dart/Flutter code written or modified | `flutter-reviewer` |
+| Code written or modified — ONE reviewer by file type | `.tsx/.jsx` → `react-reviewer` · `.ts/.js` (non-React) → `typescript-reviewer` · `.dart` → `flutter-reviewer` · other / mixed / cross-cutting → `code-reviewer` |
 | Migration / schema change / raw SQL / Sequelize models, transactions, indexes | `database-reviewer` |
 | Error handling touched — catch blocks, fallbacks, retries, webhook acks | `silent-failure-hunter` |
 | Something is slow — endpoint latency, N+1, bundle size, memory growth | `performance-optimizer` |
@@ -29,6 +28,8 @@ Self-invoked checklist — not automatic. When a trigger below matches, I should
 
 Run independent agents in parallel — never sequential when tasks don't depend on each other.
 
+Reviewer stacking: file-type reviewers (`code-reviewer`/`typescript-reviewer`/`react-reviewer`/`flutter-reviewer`) never stack with each other — pick exactly one per change. Specialists (`security-reviewer`, `database-reviewer`, `silent-failure-hunter`) DO stack on top when their trigger matches.
+
 ## Agents vs Skills
 Same domain, different mechanism — don't run both for one job:
 - **Agent** = delegated worker in its own context window; returns only a summary. Use for independent/cold review or grading, heavy fan-out exploration, parallel work, or keeping large output out of the main thread.
@@ -38,8 +39,8 @@ Rule of thumb: need isolation, independence, or parallelism → agent. Need a ch
 
 | Domain | Default | The other one |
 |--------|---------|---------------|
-| Code review | `code-reviewer` / `react-reviewer` / `typescript-reviewer` agent (cold, post-change) | `/code-review`, `/simplify`, `/review` skill (inline, your context) |
-| Security | `security-reviewer` agent (review) | `/security-bounty-hunter` (exploit hunting), `/security-review` (inline diff) |
+| Code review | one file-type reviewer agent (cold, post-change — route per trigger table) | `/code-review`, `/simplify`, `/review` skill (inline, your context) |
+| Security | `security-reviewer` agent (cold review of a change/diff) | `/security-review` (quick inline pass on pending diff) · `/security-bounty-hunter` (exploit hunt across EXISTING code, not a diff) |
 | TDD | `/tdd` skill (drive red-green-refactor inline) | `tdd-guide` agent (delegated enforcement) |
 | Dead code | `/refactor-clean` skill (inline, validate each step) | `refactor-cleaner` agent (batch analysis + removal) |
 | Planning | `planner` agent (delegated, returns plan) | `/plan` skill (plan inline in this thread) |
