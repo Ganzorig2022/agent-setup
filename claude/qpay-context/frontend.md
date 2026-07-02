@@ -60,8 +60,17 @@ Identify: has `antd` ≥ 5.x + `redux` in package.json
 | Gen 2 | standalone `.prettierrc` | `.eslintrc*` | prettier first, then eslint |
 | Gen 3 | none | `eslint.config.mjs` | eslint only |
 
+## Critical Rules (executors commonly get these wrong)
+- **Never mutate Redux state directly** — always use action creators / reducers
+- **Never mutate Zustand state directly** — use `set()` function
+- **AntD Gen 1: top-level imports only** — `import { Button } from 'antd'`, never `antd/lib/button`
+- **Gen 3: TanStack Query v5 API** — `useQuery({ queryKey, queryFn })` not `useQuery(key, fn)` (v3 API)
+- **Hydration errors** — no `Date.now()`, `Math.random()`, or browser-only APIs at render time
+- **SWR (Gen 1)** — for data fetching; use `axios` for mutations, not `fetch`
+- **Do not mix generations** — do not import Radix into Gen 1/2 or AntD into Gen 2/3
+
 ## Design System (qcore) & Brand Specs
 - **qcore is the canonical QPay web design system.** Source of truth = `qpay-docs-web-v2/src/styles/qcore-tokens.css`. Brand: primary `#004fff`, secondary navy `#002148`, font **Manrope**, semantics success `#00c950` / warning `#f0b100` / danger `#fb2c36`; ships light + dark themes.
 - The `design-tokens.tokens.json` files in `qpay-deps-web` & `qpay-qpaymn-web` are Figma DTCG **export snapshots with different schemas** — not the live system; prefer qcore.
 - **`qpay-ticket-web-v2` deliberately overrides primary to indigo `#615fff`** (in its own `src/styles/globals.css`) while sharing Manrope + navy secondary + success/danger scales. Do not "correct" it to QPay blue.
-- **Brand-spec convention:** repos carry a thin per-repo `design.md` (states only its primary + render target + token-file path) inheriting a global brand core at `~/.claude/qpay-context/design.md`. Present in `qpay-docs-web-v2` and `qpay-ticket-web-v2`.
+- **Brand-spec convention:** repos carry a thin per-repo `design.md` (states only its primary + render target + token-file path) inheriting a global brand core at `~/.claude/qpay-context/design.md`. Present in `qpay-docs-web-v2` and `qpay-ticket-web-v2`. Read the per-repo `design.md` before generating any branded artifact for that repo.

@@ -58,7 +58,7 @@ src/
 - Environment values in `src/config/` — never access `process.env` directly in services
 - No hardcoded secrets — always via environment config
 
-## Stack A/B Critical Rules (Codex commonly gets these wrong)
+## Stack A/B Critical Rules (executors commonly get these wrong)
 - **No try/catch in route handlers** — Express 5 catches async throws natively; adding try/catch is wrong
 - **Use `qpay-micro-logging`, never `console.log`** — this is the internal logging package
 - **Joi schema at route entry only** — `.required()`, `.valid()`, `.uuid()`, `.max()`, `stripUnknown: true`; never validate in service layer

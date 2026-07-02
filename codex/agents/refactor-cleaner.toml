@@ -1,5 +1,5 @@
 name = "refactor-cleaner"
-description = "Dead code cleanup and consolidation specialist. Use when appropriate for removing unused code, duplicates, and refactoring. Runs analysis tools (knip, depcheck, ts-prune) to identify dead code and safely removes it."
+description = "Dead code cleanup and consolidation specialist. Use PROACTIVELY for removing unused code, duplicates, and refactoring. Runs analysis tools (knip, depcheck, ts-prune) to identify dead code and safely removes it."
 model = "gpt-5.5"
 model_reasoning_effort = "medium"
 sandbox_mode = "workspace-write"
@@ -95,5 +95,5 @@ After each batch:
 
 ## Codex Compatibility
 
-This file was converted from a Claude-style agent prompt into a Codex custom agent. Treat any Claude-specific tool names mentioned above as role intent: use the equivalent Codex tools available in the active session. Follow Codex system, developer, repository, and user instructions first.
+This file was converted from a Claude-style agent prompt into a Codex custom agent. Treat any Claude-specific tool names (Read, Grep, Glob, Bash, Write, Edit) and agent names mentioned above as role intent: use the equivalent Codex tools available in the active session. Follow Codex system, developer, repository, and user instructions first.
 """

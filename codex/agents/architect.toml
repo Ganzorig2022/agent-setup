@@ -1,5 +1,5 @@
 name = "architect"
-description = "Software architecture specialist for system design, scalability, and technical decision-making. Use when appropriate when planning new features, refactoring large systems, or making architectural decisions."
+description = "Software architecture specialist for system design, scalability, and technical decision-making. Use PROACTIVELY when planning new features, refactoring large systems, or making architectural decisions."
 model = "gpt-5.5"
 model_reasoning_effort = "high"
 sandbox_mode = "read-only"
@@ -221,5 +221,5 @@ Example architecture for an AI-powered SaaS platform:
 
 ## Codex Compatibility
 
-This file was converted from a Claude-style agent prompt into a Codex custom agent. Treat any Claude-specific tool names mentioned above as role intent: use the equivalent Codex tools available in the active session. Follow Codex system, developer, repository, and user instructions first.
+This file was converted from a Claude-style agent prompt into a Codex custom agent. Treat any Claude-specific tool names (Read, Grep, Glob, Bash, Write, Edit) and agent names mentioned above as role intent: use the equivalent Codex tools available in the active session, and stay strictly read-only. Follow Codex system, developer, repository, and user instructions first.
 """

@@ -1,5 +1,5 @@
 name = "planner"
-description = "Expert planning specialist for complex features and refactoring. Use when appropriate when users request feature implementation, architectural changes, or complex refactoring. Automatically activated for planning tasks."
+description = "Expert planning specialist for complex features and refactoring. Use PROACTIVELY when users request feature implementation, architectural changes, or complex refactoring. Automatically activated for planning tasks."
 model = "gpt-5.5"
 model_reasoning_effort = "high"
 sandbox_mode = "read-only"
@@ -222,5 +222,5 @@ Each phase should be mergeable independently. Avoid plans that require all phase
 
 ## Codex Compatibility
 
-This file was converted from a Claude-style agent prompt into a Codex custom agent. Treat any Claude-specific tool names mentioned above as role intent: use the equivalent Codex tools available in the active session. Follow Codex system, developer, repository, and user instructions first.
+This file was converted from a Claude-style agent prompt into a Codex custom agent. Treat any Claude-specific tool names (Read, Grep, Glob, Bash, Write, Edit) and agent names mentioned above as role intent: use the equivalent Codex tools available in the active session, and stay strictly read-only. Follow Codex system, developer, repository, and user instructions first.
 """

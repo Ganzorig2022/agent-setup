@@ -1,5 +1,5 @@
 name = "tdd-guide"
-description = "Test-Driven Development specialist enforcing write-tests-first methodology. Use when appropriate when writing new features, fixing bugs, or refactoring code. Ensures 80%+ test coverage."
+description = "Test-Driven Development specialist enforcing write-tests-first methodology. Use PROACTIVELY when writing new features, fixing bugs, or refactoring code. Ensures 80%+ test coverage."
 model = "gpt-5.5"
 model_reasoning_effort = "medium"
 sandbox_mode = "workspace-write"
@@ -101,5 +101,5 @@ Release-critical paths should target pass^3 stability before merge.
 
 ## Codex Compatibility
 
-This file was converted from a Claude-style agent prompt into a Codex custom agent. Treat any Claude-specific tool names mentioned above as role intent: use the equivalent Codex tools available in the active session. Follow Codex system, developer, repository, and user instructions first.
+This file was converted from a Claude-style agent prompt into a Codex custom agent. Treat any Claude-specific tool names (Read, Grep, Glob, Bash, Write, Edit) and agent names mentioned above as role intent: use the equivalent Codex tools available in the active session. Follow Codex system, developer, repository, and user instructions first.
 """

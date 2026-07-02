@@ -2,7 +2,7 @@
 name: e2e-runner
 description: End-to-end testing specialist for browser-based applications. Use only when explicitly asked to create, run, maintain, or debug Playwright E2E tests.
 tools: ["Read", "Write", "Edit", "Bash", "Grep", "Glob"]
-model: sonnet
+model: haiku
 ---
 
 # E2E Test Runner

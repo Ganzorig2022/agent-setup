@@ -6,7 +6,7 @@
 ## Environment
 - Projects: `/Users/dev/QPay` — Node.js/TypeScript microservices + Next.js/React frontends
 - Package managers: npm (backend services), pnpm or yarn (frontend — check project)
-- Models: opus (main) · haiku (subagents) · sonnet for complex multi-file coding tasks
+- Models: fable (main) · haiku (default for subagents via `CLAUDE_CODE_SUBAGENT_MODEL`) · per-agent overrides in agent frontmatter (opus for architect/planner/bug-hunter, sonnet for reviewers)
 
 ## Agent Triggers
 Self-invoked checklist — not automatic. When a trigger below matches, I should spawn the listed agent without waiting to be asked. This is a standing instruction I follow, not a harness guarantee; if a trigger is skipped, say so rather than implying review happened.
