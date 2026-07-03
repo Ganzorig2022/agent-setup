@@ -4,8 +4,8 @@
 @~/.claude/prompt-defense.md
 
 ## Environment
-- Projects: `/Users/dev/QPay` — Node.js/TypeScript microservices + Next.js/React frontends
-- Package managers: npm (backend services), pnpm or yarn (frontend — check project)
+- Projects: QPay — old-core `/Users/dev/QPay` (Express 5 + Babel JS microservices) · new-core `~/qpay-mn` (Fastify + TypeScript) · Next.js/React frontends (Gen 1–3)
+- Package managers: npm (backends) · frontends vary by generation — check the lockfile (see qpay-context/frontend.md)
 - Models: fable (main) · haiku (default for subagents via `CLAUDE_CODE_SUBAGENT_MODEL`) · per-agent overrides in agent frontmatter (opus for architect/planner/bug-hunter, sonnet for reviewers)
 
 ## Agent Triggers
