@@ -19,6 +19,7 @@ Throttle: skips if the last report is <5 days old (RunAtLoad catch-up safe).
 from __future__ import annotations
 import datetime
 import glob as globmod
+import importlib.util
 import json
 import os
 import pathlib
@@ -168,17 +169,39 @@ def deliver(date: str, report: str) -> pathlib.Path:
             elif line.startswith("TELEGRAM_CHAT_ID="):
                 chat = line.split("=", 1)[1].strip()
     if tok and chat:
-        text = f"🧹 KB Lint — {date}\n\n{report}"
+        # Render markdown as Telegram HTML (bold headers, <code>, no raw ###/**)
+        # by reusing tech-brief's converters — same visual language as the brief.
         try:
-            for i in range(0, min(len(text), 12000), 4000):
-                payload = {"chat_id": chat, "text": text[i:i + 4000],
-                           "disable_web_page_preview": True}
-                r = urllib.request.Request(
-                    f"https://api.telegram.org/bot{tok}/sendMessage",
-                    data=json.dumps(payload).encode(),
-                    headers={"Content-Type": "application/json"})
-                urllib.request.urlopen(r, timeout=15)
-            log("sent to Telegram")
+            spec = importlib.util.spec_from_file_location(
+                "techbrief", HOME / ".local/bin/tech-brief.py")
+            tb = importlib.util.module_from_spec(spec)
+            spec.loader.exec_module(tb)
+            chunks = tb.tg_chunks(f"<b>🧹 KB Lint — {date}</b>\n\n"
+                                  + tb.md_to_tg_html(report), 4000)
+            mode = "HTML"
+        except Exception as e:
+            log(f"tg html render failed ({e}); falling back to plain text")
+            text = f"🧹 KB Lint — {date}\n\n{report}"
+            chunks = [text[i:i + 4000] for i in range(0, min(len(text), 12000), 4000)]
+            mode = None
+
+        def tg_send(text: str, mode: str | None) -> None:
+            payload = {"chat_id": chat, "text": text, "disable_web_page_preview": True}
+            if mode:
+                payload["parse_mode"] = mode
+            r = urllib.request.Request(
+                f"https://api.telegram.org/bot{tok}/sendMessage",
+                data=json.dumps(payload).encode(),
+                headers={"Content-Type": "application/json"})
+            urllib.request.urlopen(r, timeout=15)
+
+        try:
+            for c in chunks:
+                try:
+                    tg_send(c, mode)
+                except Exception:   # HTML rejected (unbalanced tag after chunking) → resend plain
+                    tg_send(re.sub(r"</?[a-z]+>", "", c), None)
+            log(f"sent to Telegram ({len(chunks)} message(s))")
         except Exception as e:
             log(f"telegram failed: {e}")
     return note
