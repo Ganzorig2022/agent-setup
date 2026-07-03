@@ -12,8 +12,9 @@ human writer would — in passes:
   5. CARDS    — render 2-3 branded support images via the proven card template
 
 HUMAN-IN-THE-LOOP BY DESIGN: deep dives carry the account's reputation and ship
-~2x/month, so the packet lands in ~/Desktop/x-deepdives/<date>/ for review and
-manual posting (X long post / Article composer). Nothing is auto-posted.
+~2x/month, so the packet lands in ~/x-deepdives/<date>/ (symlinked onto Desktop)
+for review and manual posting (X long post / Article composer). Nothing is
+auto-posted.
 """
 from __future__ import annotations
 import datetime
@@ -30,7 +31,10 @@ import urllib.request
 HOME = pathlib.Path.home()
 CLAUDE = HOME / ".local/bin/claude"
 BRAND = HOME / ".claude/content/brand.md"
-OUT_ROOT = HOME / "Desktop/x-deepdives"
+# NOT under ~/Desktop: TCC/macl blocks launchd-context python3 from reading or
+# writing files created there by a terminal run (seen 2026-07-02: throttle glob
+# returned empty + every write got Errno 1). A Desktop symlink gives visibility.
+OUT_ROOT = HOME / "x-deepdives"
 LOG = HOME / "Library/Logs/x-deepdive.log"
 HANDLE = "@n_ganzo"
 LOOKBACK_DAYS = 31
@@ -199,6 +203,17 @@ def main() -> int:
         if (datetime.date.today() - newest).days < 10:
             log(f"last packet {newest} is <10 days old; skipping (use --force)")
             return 0
+
+    # Probe writability BEFORE the expensive LLM passes — a permission problem
+    # here previously cost a full 5-pass run before failing at the final write.
+    try:
+        out.mkdir(parents=True, exist_ok=True)
+        probe = out / ".write-probe"
+        probe.write_text("ok")
+        probe.unlink()
+    except OSError as e:
+        log(f"output dir not writable ({e}); abort before drafting")
+        return 1
 
     vault = vault_path()
     material = gather_material(vault)

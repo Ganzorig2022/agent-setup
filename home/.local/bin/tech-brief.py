@@ -16,8 +16,10 @@ import html
 import json
 import pathlib
 import re
+import socket
 import subprocess
 import sys
+import time
 import urllib.request
 
 # Safe XML parsing — RSS feeds are untrusted external input (XXE / billion-laughs risk).
@@ -83,6 +85,22 @@ def parse_date(s: str) -> datetime.datetime | None:
         return datetime.datetime.fromisoformat(s.replace("Z", "+00:00"))
     except Exception:
         return None
+
+
+def wait_for_network(tries: int = 9, delay: int = 20) -> bool:
+    """The 8am launchd slot can fire during a DNS blip — getaddrinfo then fails
+    instantly for every feed and the run aborts (seen 2026-07-03). Block until
+    name resolution works, up to tries*delay seconds."""
+    for i in range(tries):
+        try:
+            socket.getaddrinfo("hnrss.org", 443)
+            return True
+        except OSError:
+            if i == 0:
+                log("network/DNS not ready; waiting...")
+            time.sleep(delay)
+    log(f"no DNS after {tries * delay}s; proceeding anyway (feeds may fail)")
+    return False
 
 
 def fetch(url: str) -> list[dict]:
@@ -400,6 +418,7 @@ def main() -> int:
         if age_h < 4:
             log("brief <4h old; skipping (use --force to override)")
             return 0
+    wait_for_network()
     items: list[dict] = []
     for url in FEEDS:
         got = fetch(url)
