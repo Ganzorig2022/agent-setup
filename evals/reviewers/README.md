@@ -23,6 +23,21 @@ history → `~/agent-evals/scores.jsonl`. Telegram ping on regression only.
 Exit 1 = regression (a bug hit ≥67% in baseline is now missed, or trap flags
 exceed `max_false_positives`).
 
+## Drill mode
+
+Purpose: self-test the regression alarm without touching live agent files. The
+drill shadows one reviewer with an inline style-commenter that only discusses
+naming and organization, so baseline bugs should be missed.
+
+```sh
+agent-evals.py --drill security-reviewer
+```
+
+Expected outcome: exit 1 plus a Telegram regression alert. Drill runs force the
+selected agent and 1 rep, and keep the usual `-drill` report/raw tags plus
+`mode="drill"` scores. If `AGENT_EVALS_AGENTS_JSON` is already set, that
+explicit inline agent JSON wins.
+
 ## Task anatomy
 
 ```

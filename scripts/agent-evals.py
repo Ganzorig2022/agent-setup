@@ -13,6 +13,7 @@ Usage:
   agent-evals.py --full              # 3 reps per pair (variance; Max-plan mode)
   agent-evals.py --agent NAME        # only pairs for one agent (post-prompt-change)
   agent-evals.py --task TASK         # only one task (smoke)
+  agent-evals.py --drill NAME        # alarm self-test: gutted inline agent, 1 rep
   agent-evals.py --full --save-baseline   # write evals/reviewers/baseline.json
 
 Manual-only by design: no cron, no scheduled token burn. Report ->
@@ -20,10 +21,15 @@ Manual-only by design: no cron, no scheduled token burn. Report ->
 Exit code: 1 if regressions were detected, else 0.
 
 Regression drill (alarm self-test, never touches live agent files):
+  agent-evals.py --drill <agent>
+This injects a built-in inline style-commenter agent, forces --agent <agent>,
+and forces 1 rep. It is equivalent to:
   AGENT_EVALS_AGENTS_JSON='{"<agent>": {"description": "...", "prompt": "<gutted>"}}' \
     agent-evals.py --agent <agent>
 The JSON is passed to claude --agents; an inline definition with the same name
 shadows ~/.claude/agents/<agent>.md. Rows are tagged mode="drill" in scores.jsonl.
+If AGENT_EVALS_AGENTS_JSON is explicitly set, that value wins over --drill's
+built-in inline definition.
 """
 from __future__ import annotations
 import argparse
@@ -53,6 +59,18 @@ REVIEW_PROMPT = (
     "(CRITICAL/HIGH/MEDIUM/LOW), a one-line defect statement, and the concrete "
     "failure scenario. If you find nothing, say so explicitly."
 )
+DRILL_AGENT_DESCRIPTION = (
+    "Alarm self-test inline agent that intentionally comments only on naming "
+    "and organization."
+)
+DRILL_AGENT_PROMPT = (
+    "You are a style-commenter used for an eval alarm drill. Review code ONLY "
+    "for naming and organization. Do not identify, discuss, imply, or mention "
+    "bugs, errors, defects, failures, exceptions, security issues, correctness "
+    "problems, reliability problems, regressions, or severities. Never use "
+    "severity labels such as CRITICAL, HIGH, MEDIUM, or LOW. If there are no "
+    "naming or organization comments, say that briefly."
+)
 
 
 def log(msg: str) -> None:
@@ -81,6 +99,15 @@ def load_tasks(only_task: str | None, only_agent: str | None):
                 continue
             pairs.append((task_name, truth_file.parent / "task", truth, agent))
     return pairs
+
+
+def drill_agents_json(agent: str) -> str:
+    return json.dumps({
+        agent: {
+            "description": DRILL_AGENT_DESCRIPTION,
+            "prompt": DRILL_AGENT_PROMPT,
+        },
+    })
 
 
 def run_review(agent: str, task_dir: pathlib.Path) -> tuple[str, float]:
@@ -167,9 +194,26 @@ def main() -> int:
     ap.add_argument("--full", action="store_true", help="3 reps per pair")
     ap.add_argument("--agent", help="only this agent")
     ap.add_argument("--task", help="only this task")
+    ap.add_argument("--drill", metavar="AGENT",
+                    help="alarm self-test for AGENT using gutted inline style-commenter")
     ap.add_argument("--save-baseline", action="store_true")
     args = ap.parse_args()
-    reps = 3 if args.full else 1
+
+    if args.drill:
+        args.agent = args.drill
+        if args.full:
+            log("WARNING: --drill forces 1 rep; ignoring --full")
+        reps = 1
+        if "AGENT_EVALS_AGENTS_JSON" not in os.environ:
+            os.environ["AGENT_EVALS_AGENTS_JSON"] = drill_agents_json(args.drill)
+        else:
+            log("AGENT_EVALS_AGENTS_JSON is set; using it instead of built-in drill agent")
+    else:
+        reps = 3 if args.full else 1
+    if args.save_baseline and os.environ.get("AGENT_EVALS_AGENTS_JSON"):
+        log("ERROR: refusing --save-baseline in drill mode (a gutted-agent baseline "
+            "would silently disable regression detection)")
+        return 1
 
     pairs = load_tasks(args.task, args.agent)
     if not pairs:
