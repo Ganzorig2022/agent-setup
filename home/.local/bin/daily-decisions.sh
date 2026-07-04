@@ -58,6 +58,19 @@ choice. No preamble, no closing remarks. If there is nothing substantive worth
 logging, output exactly: No significant decisions logged.
 EOF
 
+# Wait for network before the claude call — the 21:00 slot can fire with the
+# lid closed and Wi-Fi down (same failure as tech-brief 08:00, 2026-07-04).
+# Retry every 5 min up to 4h; sleep just stretches if the Mac naps.
+NET_DEADLINE=$(( $(date +%s) + 4*3600 ))
+until nc -z -G 5 api.anthropic.com 443 2>/dev/null; do
+  if [ "$(date +%s)" -ge "$NET_DEADLINE" ]; then
+    log "no network after 4h; giving up (login catch-up will retry)"
+    exit 1
+  fi
+  log "network down; retrying in 5 min"
+  sleep 300
+done
+
 SUMMARY="$("$CLAUDE" -p "$PROMPT" < "$MATERIAL" 2>>"$LOG")" || { log "claude summarization failed"; exit 1; }
 if [ -z "${SUMMARY//[[:space:]]/}" ]; then
   log "claude returned empty summary; nothing written"
