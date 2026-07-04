@@ -1,0 +1,10 @@
+{
+  "hook_event_name": "PostToolUse",
+  "tool_name": "ExitPlanMode",
+  "tool_input": {
+    "plan": "Add smoke tests for Claude Code hooks."
+  },
+  "tool_response": {
+    "approved": true
+  }
+}

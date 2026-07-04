@@ -1,0 +1,10 @@
+{
+  "hook_event_name": "PostToolUse",
+  "tool_name": "Edit",
+  "tool_input": {
+    "file_path": "__TEMP_FILE__"
+  },
+  "tool_response": {
+    "filePath": "__TEMP_FILE__"
+  }
+}

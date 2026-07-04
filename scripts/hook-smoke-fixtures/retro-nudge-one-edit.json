@@ -1,0 +1,6 @@
+{
+  "hook_event_name": "Stop",
+  "session_id": "smoke-one-edit",
+  "transcript_path": "__TEMP_TRANSCRIPT__",
+  "stop_hook_active": false
+}

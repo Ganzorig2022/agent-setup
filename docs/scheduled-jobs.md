@@ -32,6 +32,7 @@ jobs are only lost if the Mac is shut down across the slot.
 | Tool | Trigger | Purpose |
 |---|---|---|
 | `agent-evals.py` | manual, after changing an agent prompt/hook | Reviewer-agent regression evals vs committed baseline (`evals/reviewers/`). Kept off cron so it can't burn tokens on a timer |
+| `scripts/hook-smoke.py` | manual, after editing any hook in `claude/hooks/` | Zero-token pipe-tests: canned JSON payloads → every hook, asserts exit codes + output shape in a temp HOME (never touches live `~/.claude`) |
 | `x-reply.py` | called by tech-brief | Posts drafted X replies via logged-in headless Chrome; safety rails: kill switch `~/Desktop/tech-brief/.no-auto-reply`, dedupe cache, 4/run cap, jittered spacing |
 | `x-harvest.py` | called by tech-brief (4h cache) | Headless X scrape of ~25 builder accounts; `--login` re-auths when the borrowed session is revoked |
 

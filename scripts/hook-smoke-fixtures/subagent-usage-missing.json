@@ -1,0 +1,6 @@
+{
+  "hook_event_name": "SubagentStop",
+  "agent_id": "smoke-missing",
+  "agent_type": "code-reviewer",
+  "agent_transcript_path": "__TEMP_AGENT_TRANSCRIPT__"
+}
