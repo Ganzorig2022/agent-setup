@@ -6,7 +6,7 @@
 ## Environment
 - Projects: QPay — old-core `/Users/dev/QPay` (Express 5 + Babel JS microservices) · new-core `~/qpay-mn` (Fastify + TypeScript) · Next.js/React frontends (Gen 1–3)
 - Package managers: npm (backends) · frontends vary by generation — check the lockfile (see qpay-context/frontend.md)
-- Models: fable (main) · haiku (default for subagents via `CLAUDE_CODE_SUBAGENT_MODEL`) · per-agent overrides in agent frontmatter (opus for architect/planner/bug-hunter, sonnet for reviewers)
+- Models: fable (main — LEAVES subscription plans after 2026-07-07; fallback = opus. If today is past that date and settings.json still says claude-fable-5, tell the user to flip it to opus — headless jobs inherit that default) · haiku (default for subagents via `CLAUDE_CODE_SUBAGENT_MODEL`) · per-agent overrides in agent frontmatter (opus for architect/planner/bug-hunter, sonnet for reviewers)
 
 ## Agent Triggers
 Self-invoked checklist — not automatic. When a trigger below matches, I should spawn the listed agent without waiting to be asked. This is a standing instruction I follow, not a harness guarantee; if a trigger is skipped, say so rather than implying review happened.
