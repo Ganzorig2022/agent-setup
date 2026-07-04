@@ -35,6 +35,13 @@ Any pre-existing real file is moved to `~/.agent-stack-backup/<timestamp>/` firs
 is a no-op for already-linked paths. Hook paths in `settings.json` use `$HOME`, so they work
 under any username.
 
+Then install Claude Code plugins (machine-local state, not synced by this repo):
+
+```sh
+claude plugin marketplace add openai/codex-plugin-cc
+claude plugin install codex@openai-codex   # /codex:rescue|review|transfer — drives the local codex CLI
+```
+
 ## Day-to-day sync
 
 Because files are symlinks back into this repo, edits made by any tool land in the repo:
