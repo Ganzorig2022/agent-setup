@@ -7,6 +7,10 @@
 # Intentionally EXCLUDED (machine-specific, do not sync):
 #   notify, [projects.*], [marketplaces.*], [mcp_servers.*], [plugins.*],
 #   [desktop.*], [tui.model_availability_nux], [[skills.config]]
+#
+# notify on the main machine points at hooks/notify-wrapper.py (in this repo),
+# which forwards to the computer-use client and logs per-subagent token usage
+# to ~/.codex/log/subagent-usage.log — re-wire manually on a new machine.
 
 model = "gpt-5.5"
 model_reasoning_effort = "high"
