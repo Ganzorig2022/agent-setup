@@ -77,18 +77,29 @@ def load_tasks(only_task: str | None, only_agent: str | None):
 
 
 def run_review(agent: str, task_dir: pathlib.Path) -> tuple[str, float]:
-    """Copy the task to a temp dir and run the reviewer agent headlessly."""
+    """Copy the task to a temp dir and run the reviewer agent headlessly.
+
+    --permission-mode default is REQUIRED: the user's global defaultMode is
+    "plan", and under plan mode headless agents write findings to a plan file
+    and print only a handoff line — graded 0% (baseline run 1, 2026-07-04).
+    Retries transient API connection failures up to 3 attempts."""
     with tempfile.TemporaryDirectory(prefix=f"eval-{agent}-") as tmp:
         work = pathlib.Path(tmp) / "code"
         shutil.copytree(task_dir, work)
         t0 = time.time()
-        res = subprocess.run(
-            [str(CLAUDE), "--agent", agent, "-p", REVIEW_PROMPT],
-            cwd=work, capture_output=True, text=True, timeout=CALL_TIMEOUT)
-        dur = time.time() - t0
-        if res.returncode != 0:
-            log(f"  claude rc={res.returncode}: {res.stderr[:200]}")
-        return res.stdout, dur
+        out = ""
+        for attempt in range(3):
+            res = subprocess.run(
+                [str(CLAUDE), "--agent", agent, "--permission-mode", "default",
+                 "-p", REVIEW_PROMPT],
+                cwd=work, capture_output=True, text=True, timeout=CALL_TIMEOUT)
+            out = res.stdout
+            if res.returncode == 0 and out.strip() and "API Error" not in out[:200]:
+                break
+            log(f"  attempt {attempt + 1} failed (rc={res.returncode}, "
+                f"out={out.strip()[:80]!r}); retrying in 30s")
+            time.sleep(30)
+        return out, time.time() - t0
 
 
 def keyword_group_hit(out: str, group: list[str]) -> bool:
@@ -126,10 +137,11 @@ def grade(output: str, truth: dict, agent: str) -> dict:
                  "intentional", "by design", "working as intended", "correctly")
     severities = ("critical", "high", "medium", "low")
     traps = [t["id"] for t in truth.get("traps", [])
-             if any(all(keyword_group_hit(w, g) for g in t["keywords"])
-                    and any(s in w for s in severities)
-                    and not any(n in w for n in negations)
-                    for w in wins)]
+             if (not t.get("agents") or agent in t["agents"])
+             and any(all(keyword_group_hit(w, g) for g in t["keywords"])
+                     and any(s in w for s in severities)
+                     and not any(n in w for n in negations)
+                     for w in wins)]
     expected = len(hits)
     recall = (sum(hits.values()) / expected) if expected else 1.0
     return {"hits": hits, "misses": misses, "traps_flagged": traps,

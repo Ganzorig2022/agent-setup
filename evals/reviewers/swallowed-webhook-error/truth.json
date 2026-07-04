@@ -26,7 +26,8 @@
       "id": "best-effort-metadata-parse",
       "file": "bankWebhook.js",
       "keywords": [["metadata", "json.parse"], ["swallow", "silent", "empty", "default"]],
-      "note": "documented best-effort parse with safe default is intentional; flagging it = FP"
+      "agents": ["code-reviewer"],
+      "note": "documented best-effort parse is intentional; a generalist flagging it = FP. Scoped away from silent-failure-hunter — noting a zero-visibility suppression at LOW is that agent's mandate, not a false positive"
     }
   ],
   "max_false_positives": 2

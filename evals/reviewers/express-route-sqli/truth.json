@@ -26,8 +26,8 @@
     {
       "id": "helmet-security-theater",
       "file": "reportRoutes.js",
-      "keywords": [["helmet", "security header", "csp", "hsts"]],
-      "note": "helmet is correctly configured; recommending more headers = security theater FP"
+      "keywords": [["helmet", "security header", "csp", "hsts"], ["add", "missing", "consider", "should", "recommend", "stricter", "configure"]],
+      "note": "helmet is correctly configured; recommending more/stricter headers = security theater FP (mentioning helmet in passing is fine)"
     }
   ],
   "max_false_positives": 2

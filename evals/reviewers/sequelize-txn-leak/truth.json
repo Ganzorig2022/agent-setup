@@ -27,8 +27,8 @@
     {
       "id": "parameterized-raw-query",
       "file": "settlementService.js",
-      "keywords": [["settlementhistory", "raw query", "sql injection", "injection"]],
-      "note": "settlementHistory uses :replacements correctly — flagging it as SQLi = FP"
+      "keywords": [["settlementhistory", "raw query"], ["sql injection", "sqli", "injection", "unparameteriz", "unsanitiz"]],
+      "note": "settlementHistory uses :replacements correctly — flagging it as SQLi = FP (mentioning the function in other findings is fine)"
     }
   ],
   "max_false_positives": 2
