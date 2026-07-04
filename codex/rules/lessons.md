@@ -17,3 +17,11 @@ general rules in `rules/common/`; this file is for cross-cutting tooling/workflo
   Claude side, then copy. See QPay/AGENTS.md "Review layer".
 - `/Users/dev/QPay/AGENT_GUIDE.md` is the QPay workspace handoff authority for planner →
   implementer → reviewer flows.
+
+## Runtime mechanics
+- `config.toml` `notify` accepts a SINGLE program — to add behavior, wrap it
+  (`~/.codex/hooks/notify-wrapper.py` forwards to the original notifier first, then acts).
+  Subagent threads write their own rollouts under `~/.codex/sessions/` with
+  `session_meta.payload.source.subagent` (nickname/role/parent_thread_id),
+  `turn_context.model`, and `token_count` events — parsed into the per-subagent usage log
+  at `~/.codex/log/subagent-usage.log`.
