@@ -1,40 +1,14 @@
 {
  "created": "2026-07-04",
  "cli_version": "2.1.201 (Claude Code)",
+ "regraded": "from saved raw outputs after trap calibration",
  "pairs": {
-  "typescript-reviewer|async-error-propagation": {
-   "model": "sonnet",
-   "reps": 3,
-   "bug_hits": {
-    "mutates-caller-order": 0.67,
-    "floating-promise-no-catch": 0.67
-   },
-   "trap_flags": 0.0
-  },
   "code-reviewer|async-error-propagation": {
    "model": "sonnet",
    "reps": 3,
    "bug_hits": {
-    "mutates-caller-order": 0.67,
-    "floating-promise-no-catch": 0.33
-   },
-   "trap_flags": 0.0
-  },
-  "typescript-reviewer|bull-processor-race": {
-   "model": "sonnet",
-   "reps": 3,
-   "bug_hits": {
-    "charge-persist-fire-and-forget": 0.33,
-    "no-idempotency-on-retry": 0.33
-   },
-   "trap_flags": 0.0
-  },
-  "silent-failure-hunter|bull-processor-race": {
-   "model": "sonnet",
-   "reps": 3,
-   "bug_hits": {
-    "charge-persist-fire-and-forget": 0.0,
-    "no-idempotency-on-retry": 0.0
+    "mutates-caller-order": 1.0,
+    "floating-promise-no-catch": 1.0
    },
    "trap_flags": 0.0
   },
@@ -42,8 +16,60 @@
    "model": "sonnet",
    "reps": 3,
    "bug_hits": {
-    "charge-persist-fire-and-forget": 0.33,
-    "no-idempotency-on-retry": 0.33
+    "charge-persist-fire-and-forget": 1.0,
+    "no-idempotency-on-retry": 1.0
+   },
+   "trap_flags": 0.0
+  },
+  "code-reviewer|express-route-sqli": {
+   "model": "sonnet",
+   "reps": 3,
+   "bug_hits": {
+    "sqli-raw-interpolation": 1.0
+   },
+   "trap_flags": 0.0
+  },
+  "code-reviewer|react-hook-deps": {
+   "model": "sonnet",
+   "reps": 3,
+   "bug_hits": {
+    "stale-closure-status": 1.0,
+    "interval-never-cleared": 1.0
+   },
+   "trap_flags": 0.0
+  },
+  "code-reviewer|sequelize-txn-leak": {
+   "model": "sonnet",
+   "reps": 3,
+   "bug_hits": {
+    "txn-early-return-leak": 1.0
+   },
+   "trap_flags": 0.0
+  },
+  "code-reviewer|swallowed-webhook-error": {
+   "model": "sonnet",
+   "reps": 3,
+   "bug_hits": {
+    "ack-despite-failed-processing": 1.0,
+    "empty-catch-notify": 1.0
+   },
+   "trap_flags": 0.33
+  },
+  "database-reviewer|sequelize-txn-leak": {
+   "model": "sonnet",
+   "reps": 3,
+   "bug_hits": {
+    "txn-early-return-leak": 1.0,
+    "missing-fk-index": 1.0
+   },
+   "trap_flags": 0.33
+  },
+  "react-reviewer|react-hook-deps": {
+   "model": "sonnet",
+   "reps": 3,
+   "bug_hits": {
+    "stale-closure-status": 1.0,
+    "interval-never-cleared": 1.0
    },
    "trap_flags": 0.33
   },
@@ -51,10 +77,46 @@
    "model": "sonnet",
    "reps": 3,
    "bug_hits": {
-    "sqli-raw-interpolation": 0.67,
-    "report-missing-validation": 0.67
+    "sqli-raw-interpolation": 1.0,
+    "report-missing-validation": 1.0
+   },
+   "trap_flags": 0.0
+  },
+  "silent-failure-hunter|bull-processor-race": {
+   "model": "sonnet",
+   "reps": 3,
+   "bug_hits": {
+    "charge-persist-fire-and-forget": 1.0,
+    "no-idempotency-on-retry": 1.0
+   },
+   "trap_flags": 0.0
+  },
+  "silent-failure-hunter|swallowed-webhook-error": {
+   "model": "sonnet",
+   "reps": 3,
+   "bug_hits": {
+    "ack-despite-failed-processing": 1.0,
+    "empty-catch-notify": 1.0
+   },
+   "trap_flags": 0.0
+  },
+  "typescript-reviewer|async-error-propagation": {
+   "model": "sonnet",
+   "reps": 3,
+   "bug_hits": {
+    "mutates-caller-order": 1.0,
+    "floating-promise-no-catch": 1.0
    },
    "trap_flags": 0.33
+  },
+  "typescript-reviewer|bull-processor-race": {
+   "model": "sonnet",
+   "reps": 3,
+   "bug_hits": {
+    "charge-persist-fire-and-forget": 1.0,
+    "no-idempotency-on-retry": 1.0
+   },
+   "trap_flags": 0.0
   },
   "typescript-reviewer|express-route-sqli": {
    "model": "sonnet",
@@ -63,68 +125,7 @@
     "sqli-raw-interpolation": 1.0,
     "report-missing-validation": 1.0
    },
-   "trap_flags": 0.67
-  },
-  "code-reviewer|express-route-sqli": {
-   "model": "sonnet",
-   "reps": 3,
-   "bug_hits": {
-    "sqli-raw-interpolation": 1.0
-   },
    "trap_flags": 0.33
-  },
-  "react-reviewer|react-hook-deps": {
-   "model": "sonnet",
-   "reps": 3,
-   "bug_hits": {
-    "stale-closure-status": 0.67,
-    "interval-never-cleared": 0.67
-   },
-   "trap_flags": 0.33
-  },
-  "code-reviewer|react-hook-deps": {
-   "model": "sonnet",
-   "reps": 3,
-   "bug_hits": {
-    "stale-closure-status": 0.67,
-    "interval-never-cleared": 0.67
-   },
-   "trap_flags": 0.0
-  },
-  "database-reviewer|sequelize-txn-leak": {
-   "model": "sonnet",
-   "reps": 3,
-   "bug_hits": {
-    "txn-early-return-leak": 0.67,
-    "missing-fk-index": 1.0
-   },
-   "trap_flags": 1.0
-  },
-  "code-reviewer|sequelize-txn-leak": {
-   "model": "sonnet",
-   "reps": 3,
-   "bug_hits": {
-    "txn-early-return-leak": 0.33
-   },
-   "trap_flags": 0.33
-  },
-  "silent-failure-hunter|swallowed-webhook-error": {
-   "model": "sonnet",
-   "reps": 3,
-   "bug_hits": {
-    "ack-despite-failed-processing": 0.33,
-    "empty-catch-notify": 0.33
-   },
-   "trap_flags": 0.33
-  },
-  "code-reviewer|swallowed-webhook-error": {
-   "model": "sonnet",
-   "reps": 3,
-   "bug_hits": {
-    "ack-despite-failed-processing": 0.67,
-    "empty-catch-notify": 0.67
-   },
-   "trap_flags": 0.67
   }
  }
 }

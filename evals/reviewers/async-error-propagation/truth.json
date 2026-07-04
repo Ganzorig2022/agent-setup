@@ -26,8 +26,8 @@
     {
       "id": "express5-async-handler-fine",
       "file": "orderService.js",
-      "keywords": [["try/catch", "try-catch", "wrap the handler", "error handling middleware missing", "unhandled route"]],
-      "note": "Express 5 forwards async-handler rejections natively (and the code documents it); demanding try/catch = FP"
+      "keywords": [["add try/catch", "add a try/catch", "add a try-catch", "wrap the handler", "wrap this handler", "needs try/catch", "needs a try/catch", "missing try/catch", "should wrap"]],
+      "note": "Express 5 forwards async-handler rejections natively (and the code documents it); DEMANDING a try/catch wrapper on the handler = FP. Merely discussing try/catch (e.g. quoting the code comment, or a .catch fix for the floating promise) is fine — keywords are recommendation-phrased for that reason"
     }
   ],
   "max_false_positives": 2

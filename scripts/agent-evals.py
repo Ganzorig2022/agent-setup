@@ -119,6 +119,11 @@ def windows(output: str, span: int = 3) -> list[str]:
 
 def grade(output: str, truth: dict, agent: str) -> dict:
     wins = windows(output)
+    # Traps grade on SINGLE paragraphs: 3-paragraph windows stitch adjacent
+    # findings together, so a legit neighbor finding's words satisfied trap
+    # groups (code-reviewer x metadata trap, run 2 2026-07-04). A finding is
+    # normally one paragraph block, so span=1 is enough for traps.
+    trap_wins = windows(output, span=1)
     hits, misses = {}, []
     for bug in truth["bugs"]:
         if bug.get("agents") and agent not in bug["agents"]:
@@ -141,7 +146,7 @@ def grade(output: str, truth: dict, agent: str) -> dict:
              and any(all(keyword_group_hit(w, g) for g in t["keywords"])
                      and any(s in w for s in severities)
                      and not any(n in w for n in negations)
-                     for w in wins)]
+                     for w in trap_wins)]
     expected = len(hits)
     recall = (sum(hits.values()) / expected) if expected else 1.0
     return {"hits": hits, "misses": misses, "traps_flagged": traps,

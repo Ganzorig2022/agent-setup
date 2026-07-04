@@ -7,9 +7,9 @@
       "lines": [16, 19],
       "severity": "CRITICAL",
       "keywords": [
-        ["rollback", "roll back", "never released", "leak", "open transaction", "dangling"],
-        ["early return", "return null", "!balance", "unknown merchant", "not found"]
-      ]
+        ["rollback", "rolled back", "never released", "open transaction", "dangling", "leak"]
+      ],
+      "_note": "essence = the transaction is left open on a non-commit path. Agents legitimately report it via the exception path (no try/catch/rollback) OR the early return — either angle counts; requiring both keyword groups in one window failed a correct review (run 2, 2026-07-04)"
     },
     {
       "id": "missing-fk-index",
