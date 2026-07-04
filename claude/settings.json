@@ -80,7 +80,22 @@
           }
         ]
       }
+    ],
+    "SubagentStop": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "python3 /Users/dev/.claude/hooks/subagent-usage.py",
+            "timeout": 15
+          }
+        ]
+      }
     ]
+  },
+  "subagentStatusLine": {
+    "type": "command",
+    "command": "python3 /Users/dev/.claude/hooks/subagent-statusline.py"
   },
   "statusLine": {
     "type": "command",
