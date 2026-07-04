@@ -24,8 +24,10 @@ import json
 import os
 import pathlib
 import re
+import socket
 import subprocess
 import sys
+import time
 import urllib.request
 
 HOME = pathlib.Path.home()
@@ -187,13 +189,36 @@ def notify(date: str, title: str, verdict: str, out: pathlib.Path) -> None:
                                        data=data, headers={"Content-Type": "application/json"})
             urllib.request.urlopen(r, timeout=15)
         except Exception as e:
-            log(f"telegram notify failed: {e}")
+            # queue for outbox-flush.py — delivery keeps retrying every 30 min
+            log(f"telegram notify failed: {e}; queueing to outbox")
+            box = pathlib.Path.home() / ".outbox"
+            box.mkdir(exist_ok=True)
+            (box / f"tg-{int(time.time())}-01.json").write_text(
+                json.dumps({"text": msg, "parse_mode": None}, ensure_ascii=False))
 
 
 def main() -> int:
     date = datetime.date.today().isoformat()
     out = OUT_ROOT / date
     log(f"=== run {date} ===")
+
+    # The 07:00 slot can fire lid-closed with Wi-Fi down. Generation (harvest +
+    # LLM passes) is fully network-dependent, so block until DNS works — up to
+    # 24h (rule: the packet must be generated no matter what).
+    net_deadline = time.time() + 24 * 3600
+    warned = False
+    while time.time() < net_deadline:
+        try:
+            socket.getaddrinfo("api.anthropic.com", 443)
+            break
+        except OSError:
+            if not warned:
+                log("network down; waiting (up to 24h)")
+                warned = True
+            time.sleep(300)
+    else:
+        log("no network after 24h; giving up this cycle")
+        return 1
 
     # Throttle: one packet per half-month; RunAtLoad catch-up must not re-draft.
     force = "--force" in sys.argv

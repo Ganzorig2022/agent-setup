@@ -393,7 +393,19 @@ def deliver(date: str, brief: str) -> pathlib.Path:
             urllib.request.urlopen(r, timeout=15)
             return True
 
+        def outbox(text: str, mode: str | None, seq: int) -> None:
+            """Queue for outbox-flush.py — delivery keeps retrying every 30 min."""
+            box = HOME / ".outbox"
+            box.mkdir(exist_ok=True)
+            (box / f"tg-{int(time.time())}-{seq:02d}.json").write_text(
+                json.dumps({"text": text, "parse_mode": mode}, ensure_ascii=False))
+
+        queued = 0
         for i, part in enumerate(parts, 1):
+            if queued:  # keep order: once one part is queued, queue the rest
+                outbox(part, "HTML", i)
+                queued += 1
+                continue
             try:
                 tg_send(part, "HTML")
             except Exception as e:
@@ -401,8 +413,11 @@ def deliver(date: str, brief: str) -> pathlib.Path:
                 try:
                     tg_send(re.sub(r"</?(b|i|code|pre)>", "", part), None)
                 except Exception as e2:
-                    log(f"telegram plain send failed (part {i}/{len(parts)}): {e2}")
-                    break
+                    log(f"telegram plain send failed (part {i}/{len(parts)}): {e2}; queueing to outbox")
+                    outbox(part, "HTML", i)
+                    queued += 1
+        if queued:
+            log(f"queued {queued}/{len(parts)} telegram part(s) to ~/.outbox")
         else:
             log(f"sent to Telegram ({len(parts)} message{'s' if len(parts) > 1 else ''})")
     return note
@@ -418,15 +433,27 @@ def main() -> int:
         if age_h < 4:
             log("brief <4h old; skipping (use --force to override)")
             return 0
-    wait_for_network()
+    # Retry the whole fetch phase until network is back. The 8am slot can fire
+    # during dark wake with no DNS for hours (seen 2026-07-03/04) — sleeping here
+    # is free (the process freezes with the Mac) and resumes when it wakes.
+    # 20h deadline: content MUST be generated no matter what; only the next
+    # day's 08:00 run supersedes this one.
+    deadline = time.time() + 20 * 3600
     items: list[dict] = []
-    for url in FEEDS:
-        got = fetch(url)
-        items += got
-        log(f"{len(got):3d}  {url}")
-    if len(items) < 5:
-        log("too few items; abort")
-        return 0
+    while True:
+        wait_for_network()
+        items = []
+        for url in FEEDS:
+            got = fetch(url)
+            items += got
+            log(f"{len(got):3d}  {url}")
+        if len(items) >= 5:
+            break
+        if time.time() > deadline:
+            log("too few items after 20h of retries; abort")
+            return 0
+        log("too few items; retrying in 15 min")
+        time.sleep(900)
     # de-dupe by title
     seen, uniq = set(), []
     for it in items:

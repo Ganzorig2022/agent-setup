@@ -26,6 +26,7 @@ import pathlib
 import re
 import subprocess
 import sys
+import time
 import urllib.request
 
 HOME = pathlib.Path.home()
@@ -131,11 +132,31 @@ def check_dated_claims() -> list[str]:
 
 # ---------- semantic pass ----------
 
+def wait_for_network(max_wait_s: int = 8 * 3600, step_s: int = 300) -> bool:
+    """Sunday 10:00 can fire lid-closed with Wi-Fi down (rule: the report must
+    still be generated). Block until DNS works, up to max_wait_s."""
+    import socket
+    deadline = time.time() + max_wait_s
+    first = True
+    while time.time() < deadline:
+        try:
+            socket.getaddrinfo("api.anthropic.com", 443)
+            return True
+        except OSError:
+            if first:
+                log("network down; waiting before semantic pass")
+                first = False
+            time.sleep(step_s)
+    log(f"no network after {max_wait_s}s; semantic pass will likely fail")
+    return False
+
+
 def semantic_pass(mech_report: str) -> str:
     material = mech_report + "\n\n"
     for f in MEMORY_FILES:
         if f.exists():
             material += f"\n===== FILE: {f} =====\n{f.read_text()}\n"
+    wait_for_network()
     try:
         res = subprocess.run([str(CLAUDE), "-p", PROMPT], input=material,
                              capture_output=True, text=True, timeout=CALL_TIMEOUT)
@@ -203,7 +224,13 @@ def deliver(date: str, report: str) -> pathlib.Path:
                     tg_send(re.sub(r"</?[a-z]+>", "", c), None)
             log(f"sent to Telegram ({len(chunks)} message(s))")
         except Exception as e:
-            log(f"telegram failed: {e}")
+            # queue for outbox-flush.py — delivery keeps retrying every 30 min
+            log(f"telegram failed: {e}; queueing to outbox")
+            box = HOME / ".outbox"
+            box.mkdir(exist_ok=True)
+            for i, c in enumerate(chunks, 1):
+                (box / f"tg-{int(time.time())}-{i:02d}.json").write_text(
+                    json.dumps({"text": c, "parse_mode": mode}, ensure_ascii=False))
     return note
 
 
