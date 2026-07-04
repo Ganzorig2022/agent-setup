@@ -19,6 +19,9 @@ general rules in `rules/common/`; this file is for cross-cutting tooling/workflo
   implementer → reviewer flows.
 
 ## Runtime mechanics
+- `codex exec --sandbox workspace-write -C <repo> "<brief>"` is the headless delegation
+  entrypoint (`--full-auto` is deprecated). When the caller reviews the result, the brief
+  must say "do not commit" — leave changes uncommitted.
 - `config.toml` `notify` accepts a SINGLE program — to add behavior, wrap it
   (`~/.codex/hooks/notify-wrapper.py` forwards to the original notifier first, then acts).
   Subagent threads write their own rollouts under `~/.codex/sessions/` with
