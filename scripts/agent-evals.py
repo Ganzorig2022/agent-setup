@@ -18,11 +18,18 @@ Usage:
 Manual-only by design: no cron, no scheduled token burn. Report ->
 ~/agent-evals/<date>.md (+ scores.jsonl history). Telegram on regression only.
 Exit code: 1 if regressions were detected, else 0.
+
+Regression drill (alarm self-test, never touches live agent files):
+  AGENT_EVALS_AGENTS_JSON='{"<agent>": {"description": "...", "prompt": "<gutted>"}}' \
+    agent-evals.py --agent <agent>
+The JSON is passed to claude --agents; an inline definition with the same name
+shadows ~/.claude/agents/<agent>.md. Rows are tagged mode="drill" in scores.jsonl.
 """
 from __future__ import annotations
 import argparse
 import datetime
 import json
+import os
 import pathlib
 import re
 import shutil
@@ -88,11 +95,13 @@ def run_review(agent: str, task_dir: pathlib.Path) -> tuple[str, float]:
         shutil.copytree(task_dir, work)
         t0 = time.time()
         out = ""
+        cmd = [str(CLAUDE), "--agent", agent, "--permission-mode", "default"]
+        if os.environ.get("AGENT_EVALS_AGENTS_JSON"):
+            cmd += ["--agents", os.environ["AGENT_EVALS_AGENTS_JSON"]]
+        cmd += ["-p", REVIEW_PROMPT]
         for attempt in range(3):
             res = subprocess.run(
-                [str(CLAUDE), "--agent", agent, "--permission-mode", "default",
-                 "-p", REVIEW_PROMPT],
-                cwd=work, capture_output=True, text=True, timeout=CALL_TIMEOUT)
+                cmd, cwd=work, capture_output=True, text=True, timeout=CALL_TIMEOUT)
             out = res.stdout
             if res.returncode == 0 and out.strip() and "API Error" not in out[:200]:
                 break
@@ -183,11 +192,14 @@ def main() -> int:
                 log("  TIMEOUT"); output, dur = "", float(CALL_TIMEOUT)
             raw_dir = OUT_DIR / "raw" / date
             raw_dir.mkdir(parents=True, exist_ok=True)
-            (raw_dir / f"{agent}--{task_name}--rep{rep + 1}.md").write_text(output)
+            drill_tag = "-drill" if os.environ.get("AGENT_EVALS_AGENTS_JSON") else ""
+            (raw_dir / f"{agent}--{task_name}--rep{rep + 1}{drill_tag}.md").write_text(output)
             g = grade(output, truth, agent)
+            mode = ("drill" if os.environ.get("AGENT_EVALS_AGENTS_JSON")
+                    else "full" if args.full else "core")
             g.update(task=task_name, agent=agent, rep=rep,
                      model=agent_model(agent), duration_s=round(dur, 1),
-                     date=date, mode="full" if args.full else "core")
+                     date=date, mode=mode)
             results.append(g)
             log(f"  recall {g['recall']:.0%}"
                 + (f" · missed: {', '.join(g['misses'])}" if g["misses"] else "")
@@ -231,7 +243,9 @@ def main() -> int:
         log(f"baseline saved -> {BASELINE}")
 
     # ---- report ----
-    lines = [f"# Agent Evals — {date} ({'full' if args.full else 'core'})", ""]
+    run_mode = ("drill" if os.environ.get("AGENT_EVALS_AGENTS_JSON")
+                else "full" if args.full else "core")
+    lines = [f"# Agent Evals — {date} ({run_mode})", ""]
     by_agent: dict = {}
     for r in results:
         by_agent.setdefault(r["agent"], []).append(r)
@@ -248,8 +262,9 @@ def main() -> int:
     if regressions:
         lines += ["## ⛔ REGRESSIONS", *[f"- {x}" for x in regressions], ""]
     report = "\n".join(lines)
-    (OUT_DIR / f"{date}.md").write_text(report)
-    log(f"report -> {OUT_DIR / f'{date}.md'}")
+    suffix = "-drill" if os.environ.get("AGENT_EVALS_AGENTS_JSON") else ""
+    (OUT_DIR / f"{date}{suffix}.md").write_text(report)
+    log(f"report -> {OUT_DIR / f'{date}{suffix}.md'}")
 
     if regressions:
         _telegram(f"⛔ Agent-eval regressions ({date}):\n" + "\n".join(regressions))
