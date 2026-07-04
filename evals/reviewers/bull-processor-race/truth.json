@@ -1,0 +1,34 @@
+{
+  "agents": ["typescript-reviewer", "silent-failure-hunter", "code-reviewer"],
+  "bugs": [
+    {
+      "id": "charge-persist-fire-and-forget",
+      "file": "chargeProcessor.js",
+      "lines": [29, 39],
+      "severity": "CRITICAL",
+      "keywords": [
+        ["await", "fire-and-forget", "fire and forget", "floating", "not awaited", "unawaited"],
+        ["charge.create", "persist", "record", "db write", "database"]
+      ]
+    },
+    {
+      "id": "no-idempotency-on-retry",
+      "file": "chargeProcessor.js",
+      "lines": [14, 28],
+      "severity": "CRITICAL",
+      "keywords": [
+        ["idempoten", "double charge", "double-charge", "charged twice", "duplicate charge"],
+        ["retry", "retries", "attempts", "re-run", "rerun"]
+      ]
+    }
+  ],
+  "traps": [
+    {
+      "id": "fixed-channel-loop-not-n-plus-1",
+      "file": "chargeProcessor.js",
+      "keywords": [["n+1", "n + 1"], ["channel"]],
+      "note": "loop over 3 fixed channels is bounded; calling it an N+1/perf problem = FP"
+    }
+  ],
+  "max_false_positives": 2
+}

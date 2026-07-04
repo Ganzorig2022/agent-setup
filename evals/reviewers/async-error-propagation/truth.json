@@ -1,0 +1,34 @@
+{
+  "agents": ["typescript-reviewer", "code-reviewer"],
+  "bugs": [
+    {
+      "id": "mutates-caller-order",
+      "file": "orderService.js",
+      "lines": [13, 20],
+      "severity": "HIGH",
+      "keywords": [
+        ["mutat", "modif", "side effect", "in-place", "in place"],
+        ["order", "caller", "input", "argument", "parameter"]
+      ]
+    },
+    {
+      "id": "floating-promise-no-catch",
+      "file": "orderService.js",
+      "lines": [31, 33],
+      "severity": "HIGH",
+      "keywords": [
+        ["catch", "unhandled", "rejection", "floating", "fire-and-forget", "fire and forget"],
+        ["sendreceipt", "receipt"]
+      ]
+    }
+  ],
+  "traps": [
+    {
+      "id": "express5-async-handler-fine",
+      "file": "orderService.js",
+      "keywords": [["try/catch", "try-catch", "wrap the handler", "error handling middleware missing", "unhandled route"]],
+      "note": "Express 5 forwards async-handler rejections natively (and the code documents it); demanding try/catch = FP"
+    }
+  ],
+  "max_false_positives": 2
+}

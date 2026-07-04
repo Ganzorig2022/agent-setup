@@ -1,0 +1,33 @@
+{
+  "agents": ["react-reviewer", "code-reviewer"],
+  "bugs": [
+    {
+      "id": "stale-closure-status",
+      "file": "SettlementStatus.tsx",
+      "lines": [21, 29],
+      "severity": "HIGH",
+      "keywords": [
+        ["stale", "closure", "captured", "dependency array", "deps"],
+        ["status", "terminal", "never stops", "keeps polling"]
+      ]
+    },
+    {
+      "id": "interval-never-cleared",
+      "file": "SettlementStatus.tsx",
+      "lines": [21, 29],
+      "severity": "HIGH",
+      "keywords": [
+        ["clearinterval", "clear interval", "cleanup", "unmount", "leak", "return () =>"]
+      ]
+    }
+  ],
+  "traps": [
+    {
+      "id": "intentional-mount-analytics",
+      "file": "SettlementStatus.tsx",
+      "keywords": [["trackevent", "analytics"], ["deps", "dependency", "exhaustive"]],
+      "note": "the mount-only analytics effect is documented as intentional; flagging its deps = FP"
+    }
+  ],
+  "max_false_positives": 2
+}

@@ -1,0 +1,34 @@
+{
+  "agents": ["security-reviewer", "typescript-reviewer", "code-reviewer"],
+  "bugs": [
+    {
+      "id": "sqli-raw-interpolation",
+      "file": "reportRoutes.js",
+      "lines": [31, 40],
+      "severity": "CRITICAL",
+      "keywords": [
+        ["sql injection", "sqli", "injection"],
+        ["interpolat", "template literal", "concatenat", "replacements", "parameteriz"]
+      ]
+    },
+    {
+      "id": "report-missing-validation",
+      "file": "reportRoutes.js",
+      "lines": [29, 31],
+      "severity": "HIGH",
+      "keywords": [
+        ["validat", "joi", "sanitiz", "unvalidated", "no schema"]
+      ],
+      "agents": ["security-reviewer", "typescript-reviewer"]
+    }
+  ],
+  "traps": [
+    {
+      "id": "helmet-security-theater",
+      "file": "reportRoutes.js",
+      "keywords": [["helmet", "security header", "csp", "hsts"]],
+      "note": "helmet is correctly configured; recommending more headers = security theater FP"
+    }
+  ],
+  "max_false_positives": 2
+}

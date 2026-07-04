@@ -1,0 +1,35 @@
+{
+  "agents": ["database-reviewer", "code-reviewer"],
+  "bugs": [
+    {
+      "id": "txn-early-return-leak",
+      "file": "settlementService.js",
+      "lines": [16, 19],
+      "severity": "CRITICAL",
+      "keywords": [
+        ["rollback", "roll back", "never released", "leak", "open transaction", "dangling"],
+        ["early return", "return null", "!balance", "unknown merchant", "not found"]
+      ]
+    },
+    {
+      "id": "missing-fk-index",
+      "file": "20260501-create-settlements.js",
+      "lines": [8, 13],
+      "severity": "HIGH",
+      "keywords": [
+        ["index", "indices"],
+        ["merchant_id", "merchantid", "foreign key", "fk"]
+      ],
+      "agents": ["database-reviewer"]
+    }
+  ],
+  "traps": [
+    {
+      "id": "parameterized-raw-query",
+      "file": "settlementService.js",
+      "keywords": [["settlementhistory", "raw query", "sql injection", "injection"]],
+      "note": "settlementHistory uses :replacements correctly — flagging it as SQLi = FP"
+    }
+  ],
+  "max_false_positives": 2
+}

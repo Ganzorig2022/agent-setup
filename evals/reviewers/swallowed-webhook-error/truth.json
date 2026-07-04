@@ -1,0 +1,33 @@
+{
+  "agents": ["silent-failure-hunter", "code-reviewer"],
+  "bugs": [
+    {
+      "id": "ack-despite-failed-processing",
+      "file": "bankWebhook.js",
+      "lines": [20, 27],
+      "severity": "CRITICAL",
+      "keywords": [
+        ["200", "ack", "acknowledg", "2xx"],
+        ["retry", "retries", "lost", "never", "dropped", "no longer"]
+      ]
+    },
+    {
+      "id": "empty-catch-notify",
+      "file": "bankWebhook.js",
+      "lines": [29, 31],
+      "severity": "HIGH",
+      "keywords": [
+        ["empty catch", "swallow", "silently", "catch (e) {}", "no logging", "unlogged"]
+      ]
+    }
+  ],
+  "traps": [
+    {
+      "id": "best-effort-metadata-parse",
+      "file": "bankWebhook.js",
+      "keywords": [["metadata", "json.parse"], ["swallow", "silent", "empty", "default"]],
+      "note": "documented best-effort parse with safe default is intentional; flagging it = FP"
+    }
+  ],
+  "max_false_positives": 2
+}
