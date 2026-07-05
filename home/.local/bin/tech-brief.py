@@ -30,7 +30,10 @@ except ImportError:  # fail safe: refuse to parse untrusted XML with the vulnera
 
 HOME = pathlib.Path.home()
 CLAUDE = HOME / ".local/bin/claude"
-OUT_DIR = HOME / "Desktop/tech-brief"
+# NOT under ~/Desktop: TCC/macl blocks launchd-context python3 from writing
+# Desktop subtrees created from a terminal (globs return empty + writes Errno 1 —
+# this silently broke growth.json tracking). A Desktop symlink gives visibility.
+OUT_DIR = HOME / "tech-brief"
 CACHE_DIR = OUT_DIR / ".cache"            # x-harvest.py drops x-<date>.json here
 HARVEST = HOME / ".local/bin/x-harvest.py"
 LOG = HOME / "Library/Logs/tech-brief.log"
