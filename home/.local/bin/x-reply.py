@@ -39,7 +39,10 @@ import time
 
 HOME = pathlib.Path.home()
 PROFILE = HOME / ".local/share/tech-brief-chrome"
-OUT_DIR = HOME / "Desktop/tech-brief"
+# NOT under ~/Desktop: launchd-context python3 can't write Desktop subtrees created
+# from a terminal (TCC/macl -> Errno 1), which silently breaks replied.json dedupe.
+# tech-brief.py owns the same dir; keep both pointing here (Desktop is a symlink).
+OUT_DIR = HOME / "tech-brief"
 CACHE_DIR = OUT_DIR / ".cache"
 REPLIED = CACHE_DIR / "replied.json"
 KILL_SWITCH = OUT_DIR / ".no-auto-reply"
@@ -123,12 +126,17 @@ def composer_text() -> str | None:
 
 
 def set_composer_text(text: str) -> bool:
-    """Focus the reply composer, clear any stale draft, insert exact text, verify."""
+    """Focus the reply composer, replace any stale draft, insert exact text, verify.
+    Never execCommand('delete') before inserting: a delete on the empty composer
+    desyncs X's editor state — textContent updates but React never registers the
+    input, so the Reply button stays disabled (all 5 targets failed 2026-07-04).
+    selectAll + insertText replaces a stale draft in one synced input event."""
     payload = json.dumps(text)
     r = eval_js(
         "(() => { const el = document.querySelector('" + COMPOSER + "');"
         " if (!el) return '__NO_COMPOSER__';"
-        " el.focus(); document.execCommand('selectAll'); document.execCommand('delete');"
+        " el.focus();"
+        " if (el.textContent) document.execCommand('selectAll');"
         " document.execCommand('insertText', false, " + payload + ");"
         " return el.textContent; })()")
     return r == text
@@ -146,15 +154,34 @@ def find_reply_button_uid() -> str | None:
     Must be used immediately — X's live DOM invalidates refs within seconds."""
     snap = axi(["snapshot"], timeout=45)
     for line in snap.splitlines():
-        # want: uid=gNN:M_K button "Reply"   (no 'disabled', not "N Replies. Reply")
-        m = re.search(r'uid=(\S+) button "Reply"\s*$', line.strip())
-        if m and "disabled" not in line:
+        # want: uid=gNN:M_K button "Reply"   (not "N Replies. Reply"). axi >=0.1.26
+        # may append attribute flags after the label ("disableable disabled"), so
+        # match the label followed by space-or-EOL and check 'disabled' as a word.
+        m = re.search(r'uid=(\S+) button "Reply"( |$)', line.strip())
+        if m and not re.search(r"\bdisabled\b", line):
             return m.group(1)
     return None
 
 
+def reply_button_enabled() -> bool:
+    """DOM truth for the inline Reply button's enabled state. The accessibility
+    snapshot lags React by a beat, so poll this before snapshotting for the uid."""
+    r = eval_js(
+        "(() => { const b = document.querySelector('[data-testid=\"tweetButtonInline\"]');"
+        " if (!b) return 'none';"
+        " return b.getAttribute('aria-disabled') === 'true' ? 'disabled' : 'enabled'; })()")
+    return r == "enabled"
+
+
 def click_send() -> bool:
-    """Snapshot->click the enabled Reply button, retrying on stale refs."""
+    """Wait for the inline Reply button to enable, then snapshot->click it.
+    insertText updates the composer, but React/Draft.js re-renders the button to
+    enabled a beat later; snapshotting before that beat made find_reply_button_uid
+    return None -> 'Reply button not found/clickable' (the 2026-07-04/05 failures).
+    Poll the DOM until enabled, then act on a fresh snapshot ref immediately."""
+    deadline = time.time() + 12
+    while time.time() < deadline and not reply_button_enabled():
+        time.sleep(1)
     for attempt in range(4):
         uid = find_reply_button_uid()
         if not uid:
@@ -262,7 +289,7 @@ def main() -> int:
             t["status"], t["detail"] = "failed", "browser command timeout"
         except Exception as e:
             t["status"], t["detail"] = "failed", str(e)[:200]
-        log(f"@{t.get('handle', '?')} -> {t['status']} {t['detail']}")
+        log(f"@{(t.get('handle') or '?').lstrip('@')} -> {t['status']} {t['detail']}")
         if t["status"] == "posted":
             posted_this_run += 1
             replied[link] = {"date": datetime.date.today().isoformat(),
