@@ -5,9 +5,10 @@
 a "## Replies posted" confirmation section.
 
 Input (stdin): JSON list of targets: [{"handle", "link", "reply", "reason"}]
-Output (stdout): the same list with "status" ("posted"|"skipped"|"failed") and
-"detail" added per target. Exit 0 always — posting is best-effort; failures are
-reported in the brief for manual follow-up, never raised into it.
+Output (stdout): the same list with "status"
+("posted"|"unverified"|"skipped"|"failed") and "detail" added per target.
+Exit 0 always — posting is best-effort; failures are reported in the brief for
+manual follow-up, never raised into it.
 
 Safety rails:
   - kill switch: touch ~/Desktop/tech-brief/.no-auto-reply to disable posting
@@ -15,7 +16,8 @@ Safety rails:
   - caps: MAX_PER_RUN replies per run, 280-char guard, total wall-clock budget
   - spacing: 60-150s jittered pause between posts (no machine-gun pattern)
   - verify: reply text is confirmed in the composer before Send is clicked, and
-    the composer must clear afterwards for the post to count as confirmed
+    the reply must later be visible on @n_ganzo/with_replies before it counts
+    as posted or enters replied.json
 
 Mechanics (verified 2026-07-02, see STATE.md lessons):
   - text via eval + execCommand('insertText') — exact; CDP `fill` eats the first
@@ -54,6 +56,7 @@ TOTAL_BUDGET_S = 600
 OPEN_TIMEOUT = 50
 CMD_TIMEOUT = 30
 SPACING_RANGE_S = (60, 150)
+OWN_HANDLE = "n_ganzo"
 
 COMPOSER = '[data-testid="tweetTextarea_0"]'
 
@@ -196,7 +199,12 @@ def click_send() -> bool:
 
 
 def verify_posted(reply: str) -> bool:
-    """After Send: the inline composer clears (or collapses) on success."""
+    """After Send: the inline composer clears or collapses.
+
+    This is only a tentative signal. X can clear the composer even when the
+    reply is later dropped, rate-limited, or hidden, so this alone must never
+    update replied.json.
+    """
     for _ in range(6):
         time.sleep(2)
         txt = composer_text()
@@ -204,6 +212,39 @@ def verify_posted(reply: str) -> bool:
             return True
         if txt.strip() == reply.strip():
             continue  # still pending
+    return False
+
+
+def _norm(s: str) -> str:
+    return re.sub(r"\s+", " ", s or "").strip().lower()
+
+
+def visible_reply_texts() -> list[str]:
+    raw = eval_js(
+        r"""(() => [...document.querySelectorAll('article[data-testid="tweet"]')]
+          .map(a => a.querySelector('div[data-testid="tweetText"]')?.textContent || '')
+          .filter(Boolean)
+        )()""")
+    if not raw:
+        return []
+    try:
+        got = json.loads(raw)
+    except Exception:
+        return []
+    return [str(x) for x in got if str(x).strip()]
+
+
+def verify_reply_visible(reply: str) -> bool:
+    """Require durable evidence: the reply text appears on our replies tab."""
+    needle = _norm(reply)
+    if not needle:
+        return False
+    for attempt in range(4):
+        axi(["open", f"https://x.com/{OWN_HANDLE}/with_replies"], timeout=OPEN_TIMEOUT)
+        time.sleep(4 + attempt * 2)
+        for txt in visible_reply_texts():
+            if needle in _norm(txt):
+                return True
     return False
 
 
@@ -237,6 +278,8 @@ def post_one(target: dict) -> tuple[str, str]:
         return "failed", "Reply button not found/clickable"
     if not verify_posted(reply):
         return "failed", "sent click but composer did not clear — unconfirmed, check manually"
+    if not verify_reply_visible(reply):
+        return "unverified", "sent click and composer cleared, but reply was not visible on profile"
     return "posted", ""
 
 
@@ -257,7 +300,7 @@ def main() -> int:
 
     replied = load_replied()
     start = time.time()
-    posted_this_run = 0
+    sent_this_run = 0
     for t in targets:
         link, reply = (t.get("link") or "").strip(), (t.get("reply") or "").strip()
         t["status"], t["detail"] = "skipped", ""
@@ -270,7 +313,7 @@ def main() -> int:
         if link in replied:
             t["detail"] = f"already replied on {replied[link].get('date', '?')}"
             continue
-        if posted_this_run >= MAX_PER_RUN:
+        if sent_this_run >= MAX_PER_RUN:
             t["detail"] = f"per-run cap ({MAX_PER_RUN}) reached"
             continue
         if time.time() - start > TOTAL_BUDGET_S:
@@ -279,7 +322,7 @@ def main() -> int:
         if dry:
             t["status"], t["detail"] = "skipped", "dry run"
             continue
-        if posted_this_run:
+        if sent_this_run:
             pause = random.randint(*SPACING_RANGE_S)
             log(f"spacing {pause}s before next reply")
             time.sleep(pause)
@@ -290,8 +333,9 @@ def main() -> int:
         except Exception as e:
             t["status"], t["detail"] = "failed", str(e)[:200]
         log(f"@{(t.get('handle') or '?').lstrip('@')} -> {t['status']} {t['detail']}")
+        if t["status"] in ("posted", "unverified"):
+            sent_this_run += 1
         if t["status"] == "posted":
-            posted_this_run += 1
             replied[link] = {"date": datetime.date.today().isoformat(),
                              "handle": t.get("handle", ""), "reply": reply}
             save_replied(replied)

@@ -236,10 +236,10 @@ def reply_opportunities(x_posts: dict) -> list[dict]:
         "You are a growth strategist for an AI-builder X (Twitter) account. " + NICHE + " "
         "At ~37 followers, his fastest growth path is thoughtful REPLIES to large accounts — "
         "adding a real data point, his own concrete result, or a sharp question (NEVER generic "
-        "praise). From the recent posts by large AI accounts below, pick the 3-5 BEST reply "
+        "praise). From the recent posts by large AI accounts below, pick the 3-5 BEST manual reply "
         "targets — posts where his budget / local-model / multi-agent-memory angle genuinely "
-        "adds value. These replies are POSTED AUTOMATICALLY with no human review, so only "
-        "include a target if the reply is safe, on-voice, and specific; skip posts where he'd "
+        "adds value. These replies may be copied manually, so only include a target if the reply "
+        "is safe, on-voice, and specific; skip posts where he'd "
         "add nothing. Output ONLY a JSON array (no markdown, no code fences): each element "
         '{"handle": "@name", "link": "https://x.com/.../status/...", '
         '"reason": "<one line why this target>", "reply": "<the reply, <280 chars, his voice, '
@@ -282,18 +282,24 @@ def auto_reply(targets: list[dict]) -> list[dict]:
 
 
 def render_replies(targets: list[dict]) -> str:
-    """Confirmation section for the brief: what was auto-replied, what needs a hand."""
+    """Confirmation section for the brief: what posted, what needs a hand."""
     if not targets:
-        return "## Replies posted\n(nothing strong to reply to today)"
-    lines = ["## Replies posted"]
+        return "## Reply drafts\n(nothing strong to reply to today)"
+    any_posted = any(t.get("status") == "posted" for t in targets)
+    lines = ["## Replies posted" if any_posted else "## Reply drafts"]
     for i, t in enumerate(targets, 1):
         h, link = t.get("handle", "?"), t.get("link", "")
         reply, reason = t.get("reply", ""), t.get("reason", "")
         status, detail = t.get("status", "failed"), t.get("detail", "")
         if status == "posted":
             head = f"{i}. ✅ Replied to {h} — {reason}"
+        elif status == "unverified":
+            head = f"{i}. ⚠️ SENT BUT UNVERIFIED {h} ({detail}) — check manually:"
         elif status == "skipped":
-            head = f"{i}. ⏭️ Skipped {h} ({detail})"
+            if "auto-reply disabled" in detail:
+                head = f"{i}. 📝 Draft for {h} — {reason}"
+            else:
+                head = f"{i}. ⏭️ Skipped {h} ({detail})"
         else:
             head = f"{i}. ⚠️ FAILED {h} ({detail}) — post manually:"
         lines += [head, f"   {link}", f"   > {reply}"]

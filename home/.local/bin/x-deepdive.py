@@ -202,6 +202,19 @@ def main() -> int:
     out = OUT_ROOT / date
     log(f"=== run {date} ===")
 
+    # Throttle before network waits: RunAtLoad/catch-up should exit quickly when
+    # a fresh packet already exists, even if DNS is currently down.
+    force = "--force" in sys.argv
+    recent = sorted(OUT_ROOT.glob("*/article.md"))
+    if not force and recent:
+        newest = datetime.date.fromisoformat(recent[-1].parent.name)
+        age_days = (datetime.date.today() - newest).days
+        if age_days < 10:
+            next_eligible = newest + datetime.timedelta(days=10)
+            log(f"last packet {newest} is {age_days}d old; next eligible {next_eligible}; "
+                "skipping (use --force)")
+            return 0
+
     # The 07:00 slot can fire lid-closed with Wi-Fi down. Generation (harvest +
     # LLM passes) is fully network-dependent, so block until DNS works — up to
     # 24h (rule: the packet must be generated no matter what).
@@ -219,15 +232,6 @@ def main() -> int:
     else:
         log("no network after 24h; giving up this cycle")
         return 1
-
-    # Throttle: one packet per half-month; RunAtLoad catch-up must not re-draft.
-    force = "--force" in sys.argv
-    recent = sorted(OUT_ROOT.glob("*/article.md"))
-    if not force and recent:
-        newest = datetime.date.fromisoformat(recent[-1].parent.name)
-        if (datetime.date.today() - newest).days < 10:
-            log(f"last packet {newest} is <10 days old; skipping (use --force)")
-            return 0
 
     # Probe writability BEFORE the expensive LLM passes — a permission problem
     # here previously cost a full 5-pass run before failing at the final write.
