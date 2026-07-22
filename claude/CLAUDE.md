@@ -55,6 +55,7 @@ Rule of thumb: need isolation, independence, or parallelism → agent. Need a ch
 - Do not review code without inspecting the actual diff
 - Research local patterns + official docs before inventing; reuse over rebuild for auth, payments, uploads, webhooks, integrations
 - Before a non-trivial task (esp. QPay work), proactively query the `qmd` knowledge base (`mcp__qmd__query`) for prior decisions, patterns, and gotchas, and factor them in — it holds the auto-harvested decision log + engineering notes. Skip for trivial one-liners; don't announce when it returns nothing relevant.
+- For current third-party library/framework/SDK APIs (versions, signatures, new or changed features), consult **Context7** (`resolve-library-id` → `get-library-docs`) before coding from memory — it pulls up-to-date, version-specific docs. Use for non-trivial library/integration work; skip well-known stable basics. Codex has the same MCP server wired in `~/.codex/config.toml`.
 
 ## Coding Rules
 - Prefer immutable updates; never mutate function inputs, shared state, or caller-owned data
