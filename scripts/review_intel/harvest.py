@@ -90,28 +90,14 @@ def _apply_parse_gates(traces: list[dict]) -> dict:
                     "guardian_session_counts_only"
                 )
     guardian_rate = parse_rates.get("codex_guardian")
-    editable_rates = [
-        rate
-        for source_class, rate in parse_rates.items()
-        if source_class.endswith("_editable")
-    ]
-    editable_usable_rates = [
-        rate
-        for source_class, rate in usable_finding_rates.items()
-        if source_class.endswith("_editable")
-    ]
     return {
-        "parse_rates": parse_rates,
-        "usable_finding_rates": usable_finding_rates,
+        "advisory_lifetime_parse_rates": parse_rates,
+        "advisory_lifetime_usable_finding_rates": usable_finding_rates,
         "guardian_mode": (
             "run_only"
             if guardian_rate is not None
             else "no_data"
         ),
-        "editable_parse_gate_passed": bool(editable_rates)
-        and all(rate >= 0.90 for rate in editable_rates),
-        "editable_usable_gate_passed": bool(editable_usable_rates)
-        and all(rate is not None and rate >= 0.90 for rate in editable_usable_rates),
     }
 
 
@@ -443,6 +429,8 @@ def collect_review_traces(
         rate is not None and rate >= 0.90
         for rate in summary["post_trailer_usable_finding_rates"].values()
     )
+    summary["post_trailer_parse_gate_passed"] = post_parse_gate_passed
+    summary["post_trailer_usable_gate_passed"] = post_usable_gate_passed
     for trace in post_trailer_traces:
         source_class = trace["source_class"]
         trace["theme_eligible"] = (

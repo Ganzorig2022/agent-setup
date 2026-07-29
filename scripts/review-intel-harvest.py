@@ -44,11 +44,15 @@ def _parser() -> argparse.ArgumentParser:
 def _print_summary(summary: dict, output_dir: pathlib.Path) -> None:
     print(f"inspection_bundle: {output_dir}")
     print(f"traces: {summary['discovered_runs']}")
-    print("parse_rates:")
-    for source_class, rate in summary["parse_rates"].items():
+    print("advisory_lifetime_parse_rates:")
+    for source_class, rate in summary[
+        "advisory_lifetime_parse_rates"
+    ].items():
         print(f"  {source_class}: {rate:.1%}")
-    print("usable_finding_rates:")
-    for source_class, rate in summary["usable_finding_rates"].items():
+    print("advisory_lifetime_usable_finding_rates:")
+    for source_class, rate in summary[
+        "advisory_lifetime_usable_finding_rates"
+    ].items():
         rendered = "n/a" if rate is None else f"{rate:.1%}"
         print(f"  {source_class}: {rendered}")
     print(
@@ -64,6 +68,14 @@ def _print_summary(summary: dict, output_dir: pathlib.Path) -> None:
     ].items():
         rendered = "n/a" if rate is None else f"{rate:.1%}"
         print(f"  {source_class}: {rendered}")
+    print(
+        "post_trailer_parse_gate_passed: "
+        f"{summary['post_trailer_parse_gate_passed']}"
+    )
+    print(
+        "post_trailer_usable_gate_passed: "
+        f"{summary['post_trailer_usable_gate_passed']}"
+    )
     print(f"guardian_mode: {summary['guardian_mode']}")
     print(f"privacy_gate_passed: {summary['privacy_gate_passed']}")
     print(f"ledger_accounted: {summary['ledger_accounted']}")

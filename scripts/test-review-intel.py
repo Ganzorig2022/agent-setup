@@ -301,6 +301,24 @@ class ReviewIntelTests(unittest.TestCase):
                 result.summary["post_trailer_usable_finding_rates"],
                 {"claude_editable": 1.0},
             )
+            self.assertEqual(
+                result.summary["advisory_lifetime_parse_rates"],
+                {"claude_editable": 0.8},
+            )
+            self.assertEqual(
+                result.summary["advisory_lifetime_usable_finding_rates"],
+                {"claude_editable": 1.0},
+            )
+            self.assertTrue(
+                result.summary["post_trailer_parse_gate_passed"]
+            )
+            self.assertTrue(
+                result.summary["post_trailer_usable_gate_passed"]
+            )
+            self.assertNotIn("parse_rates", result.summary)
+            self.assertNotIn("usable_finding_rates", result.summary)
+            self.assertNotIn("editable_parse_gate_passed", result.summary)
+            self.assertNotIn("editable_usable_gate_passed", result.summary)
             self.assertTrue(result.summary["stage1_start_gate_passed"])
 
     def test_usable_finding_rate_requires_category_and_substantive_abstract(self) -> None:
@@ -347,7 +365,9 @@ class ReviewIntelTests(unittest.TestCase):
             self.assertTrue(findings[0]["usable"])
             self.assertFalse(findings[1]["usable"])
             self.assertEqual(
-                result.summary["usable_finding_rates"]["claude_editable"],
+                result.summary[
+                    "advisory_lifetime_usable_finding_rates"
+                ]["claude_editable"],
                 0.5,
             )
             self.assertFalse(result.traces[0]["theme_eligible"])
@@ -631,7 +651,12 @@ class ReviewIntelTests(unittest.TestCase):
                 salt=SALT,
             )
 
-            self.assertEqual(result.summary["parse_rates"]["codex_guardian"], 0.0)
+            self.assertEqual(
+                result.summary["advisory_lifetime_parse_rates"][
+                    "codex_guardian"
+                ],
+                0.0,
+            )
             self.assertEqual(result.summary["guardian_mode"], "run_only")
             self.assertTrue(
                 all(not trace["theme_eligible"] for trace in result.traces)

@@ -95,6 +95,18 @@ explicitly marks theme exclusions. Codex guardian output remains prose-only:
 guardian is collapsed to one record per parent session, contributes run counts
 only, and is excluded from future themes.
 
+Every Stage 1 aggregation must first group records by `run_id` and select the
+record with the latest `parser_version`. Never count multiple parser versions
+of the same run: append-only reparses preserve auditability but do not represent
+additional reviews.
+
+Retention is intentionally local-only. `~/.review-intelligence/` is the sole
+surviving copy after source transcripts expire; it is excluded from git,
+cloud-synced paths, and backups because the privacy cost of replication
+outweighs recovery value. Machine or disk loss therefore deletes the evidence
+and restarts the 20-run Stage 1 gate from zero. Revisit that tradeoff explicitly
+before adding any backup rather than silently copying the store elsewhere.
+
 Parse rate only measures whether a run can be classified as findings or a
 clean review. It is not sufficient evidence that extracted findings are
 useful. The separate usable-finding rate requires a controlled category, an
@@ -111,6 +123,9 @@ Stage gates are deliberately separate:
   every editable source class. The pre-trailer backlog is advisory input and
   counts neither for nor against this gate: its Claude half expires after 30
   days, and episode-local legacy formats have no long-run value.
+- Summary fields prefixed with `advisory_lifetime_` describe the append-only
+  historical corpus and are not gates. Only the `post_trailer_*_gate_passed`
+  flags feed `stage1_start_gate_passed`.
 - Codex `subagent-usage.log` is advisory telemetry, not a run ledger: the
   notifier writes another cumulative token snapshot whenever a live rollout
   changes. Event counts therefore exceed unique reviewer sources and are
