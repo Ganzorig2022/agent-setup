@@ -78,6 +78,37 @@ class ReviewIntelTests(unittest.TestCase):
 
         self.assertEqual(extract_findings(output), ("unparsed", []))
 
+    def test_qri_v1_rejects_non_canonical_severity_aliases(self) -> None:
+        output = """```qri-v1
+[{"severity":"MAJOR","category":"test-eval","abstract":"Finding uses an unsupported severity alias","file":"review.py"}]
+```"""
+
+        self.assertEqual(extract_findings(output), ("unparsed", []))
+
+    def test_qri_v1_rejects_unsafe_file_values(self) -> None:
+        for file_value in (
+            "/Users/dev/project/review.py",
+            "../review.py",
+            "src/../review.py",
+            "https://example.invalid/review.py",
+            "~/review.py",
+        ):
+            output = (
+                "```qri-v1\n"
+                '[{"severity":"LOW","category":"test-eval",'
+                '"abstract":"Finding has an unsafe file location",'
+                f'"file":"{file_value}"}}]\n```'
+            )
+
+            self.assertEqual(extract_findings(output), ("unparsed", []))
+
+    def test_qri_v1_rejects_short_abstracts(self) -> None:
+        output = """```qri-v1
+[{"severity":"LOW","category":"test-eval","abstract":"Too short","file":"review.py"}]
+```"""
+
+        self.assertEqual(extract_findings(output), ("unparsed", []))
+
     def test_fixture_corpus_covers_guardian_unparsed_and_redaction(self) -> None:
         guardian, reason = parse_codex_candidates(
             FIXTURES / "codex/guardian-union.jsonl"
@@ -166,6 +197,111 @@ class ReviewIntelTests(unittest.TestCase):
             self.assertNotIn("payment_settlements", serialized)
             self.assertNotIn("/Users/", serialized)
             self.assertNotIn("feature/internal-ticket", serialized)
+
+    def test_stage1_gate_ignores_pre_trailer_backlog(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            home = pathlib.Path(tmp)
+            subagents = home / ".claude/projects/project/session/subagents"
+            subagents.mkdir(parents=True)
+            for index in range(20):
+                agent_id = f"legacy-{index}"
+                (subagents / f"agent-{agent_id}.meta.json").write_text(
+                    json.dumps(
+                        {
+                            "agentType": "code-reviewer",
+                            "description": "Review",
+                        }
+                    )
+                )
+                (subagents / f"agent-{agent_id}.jsonl").write_text(
+                    json.dumps(
+                        {
+                            "type": "assistant",
+                            "uuid": f"message-{index}",
+                            "sessionId": "legacy-session",
+                            "agentId": agent_id,
+                            "timestamp": "2026-07-29T11:00:00Z",
+                            "message": {
+                                "content": [
+                                    {
+                                        "type": "text",
+                                        "text": (
+                                            "[HIGH] Missing route validation "
+                                            "allows unsafe request input."
+                                        ),
+                                    }
+                                ]
+                            },
+                        }
+                    )
+                    + "\n"
+                )
+
+            result = collect_review_traces(
+                home=home, since_days=30, now=NOW, salt=SALT
+            )
+
+            self.assertEqual(
+                result.summary["post_trailer_editable_runs"],
+                0,
+            )
+            self.assertFalse(result.summary["stage1_start_gate_passed"])
+
+    def test_stage1_gate_uses_only_post_trailer_quality_rates(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            home = pathlib.Path(tmp)
+            subagents = home / ".claude/projects/project/session/subagents"
+            subagents.mkdir(parents=True)
+            trailer = (
+                "Human review.\n\n```qri-v1\n"
+                '[{"severity":"HIGH","category":"validation",'
+                '"abstract":"Missing route validation allows unsafe request input",'
+                '"file":"route.js"}]\n```'
+            )
+            for index in range(25):
+                agent_id = f"review-{index}"
+                (subagents / f"agent-{agent_id}.meta.json").write_text(
+                    json.dumps(
+                        {
+                            "agentType": "code-reviewer",
+                            "description": "Review",
+                        }
+                    )
+                )
+                output = trailer if index < 20 else "Unstructured legacy prose."
+                (subagents / f"agent-{agent_id}.jsonl").write_text(
+                    json.dumps(
+                        {
+                            "type": "assistant",
+                            "uuid": f"message-{index}",
+                            "sessionId": "mixed-session",
+                            "agentId": agent_id,
+                            "timestamp": "2026-07-29T11:00:00Z",
+                            "message": {
+                                "content": [{"type": "text", "text": output}]
+                            },
+                        }
+                    )
+                    + "\n"
+                )
+
+            result = collect_review_traces(
+                home=home, since_days=30, now=NOW, salt=SALT
+            )
+
+            self.assertEqual(
+                result.summary["post_trailer_editable_runs"],
+                20,
+            )
+            self.assertEqual(
+                result.summary["post_trailer_parse_rates"],
+                {"claude_editable": 1.0},
+            )
+            self.assertEqual(
+                result.summary["post_trailer_usable_finding_rates"],
+                {"claude_editable": 1.0},
+            )
+            self.assertTrue(result.summary["stage1_start_gate_passed"])
 
     def test_usable_finding_rate_requires_category_and_substantive_abstract(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
@@ -724,7 +860,7 @@ class ReviewIntelTests(unittest.TestCase):
             )
             trailer = [
                 {
-                    "severity": "MAJOR",
+                    "severity": "HIGH",
                     "category": "race-idempotency",
                     "abstract": "CustomerLedger reads invoice_rows before commit",
                     "file": "internal.ts",

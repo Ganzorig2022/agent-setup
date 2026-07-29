@@ -1,0 +1,40 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN"
+  "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+  <key>Label</key>
+  <string>com.dev.review-intelligence-harvest</string>
+  <key>ProgramArguments</key>
+  <array>
+    <string>/opt/homebrew/bin/python3.12</string>
+    <string>/Users/dev/.local/bin/review-intel-harvest.py</string>
+    <string>--since-days</string>
+    <string>30</string>
+  </array>
+  <key>RunAtLoad</key>
+  <true/>
+  <key>StartCalendarInterval</key>
+  <dict>
+    <key>Hour</key>
+    <integer>2</integer>
+    <key>Minute</key>
+    <integer>30</integer>
+  </dict>
+  <key>ProcessType</key>
+  <string>Background</string>
+  <key>LowPriorityIO</key>
+  <true/>
+  <key>Umask</key>
+  <integer>63</integer>
+  <key>EnvironmentVariables</key>
+  <dict>
+    <key>PYTHONDONTWRITEBYTECODE</key>
+    <string>1</string>
+  </dict>
+  <key>StandardOutPath</key>
+  <string>/Users/dev/Library/Logs/review-intelligence-harvest.out.log</string>
+  <key>StandardErrorPath</key>
+  <string>/Users/dev/Library/Logs/review-intelligence-harvest.err.log</string>
+</dict>
+</plist>

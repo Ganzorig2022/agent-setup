@@ -165,9 +165,11 @@ link home/.local/bin/agent-setup-audit.py         "$HOME/.local/bin/agent-setup-
 link home/Library/LaunchAgents/com.dev.agent-setup-audit.plist \
                                                  "$HOME/Library/LaunchAgents/com.dev.agent-setup-audit.plist"
 
-echo "== Manual tooling (review-intelligence Stage 0A harvester) =="
+echo "== Automation (review-intelligence harvest only) =="
 link scripts/review-intel-harvest.py              "$HOME/.local/bin/review-intel-harvest.py"
 link scripts/review_intel                         "$HOME/.local/bin/review_intel"
+link home/Library/LaunchAgents/com.dev.review-intelligence-harvest.plist \
+                                                 "$HOME/Library/LaunchAgents/com.dev.review-intelligence-harvest.plist"
 
 echo
 echo "Done. Backups (if any) under: $BACKUP"
@@ -176,6 +178,7 @@ echo "  launchctl bootstrap gui/\$(id -u) ~/Library/LaunchAgents/com.dev.daily-d
 echo "  launchctl bootstrap gui/\$(id -u) ~/Library/LaunchAgents/com.dev.x-draft-factory.plist"
 echo "  launchctl bootstrap gui/\$(id -u) ~/Library/LaunchAgents/com.dev.tech-brief.plist"
 echo "  launchctl bootstrap gui/\$(id -u) ~/Library/LaunchAgents/com.dev.agent-setup-audit.plist"
+echo "  launchctl bootstrap gui/\$(id -u) ~/Library/LaunchAgents/com.dev.review-intelligence-harvest.plist"
 echo "See CONTENT.md for the content stack + morning workflow."
 echo "NOTE: machine-local secrets are NOT managed here — recreate per machine:"
 echo "  • ~/.codex/auth.json                     (run Codex login)"

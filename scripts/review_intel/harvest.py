@@ -10,6 +10,7 @@ from dataclasses import dataclass
 
 from . import PARSER_VERSION, SCHEMA_VERSION
 from .parsers import (
+    declares_qri_v1,
     extract_findings,
     parse_claude_candidate,
     parse_codex_candidates,
@@ -27,7 +28,9 @@ class CollectionResult:
     summary: dict
 
 
-def _apply_parse_gates(traces: list[dict]) -> dict:
+def _quality_rates(
+    traces: list[dict],
+) -> tuple[dict[str, float], dict[str, float | None]]:
     by_class: dict[str, list[dict]] = {}
     for trace in traces:
         by_class.setdefault(trace["source_class"], []).append(trace)
@@ -38,8 +41,28 @@ def _apply_parse_gates(traces: list[dict]) -> dict:
             trace["parse_status"] in {"parsed_clean", "parsed_findings"}
             for trace in records
         )
-        rate = round(parsed / len(records), 3) if records else 0.0
-        parse_rates[source_class] = rate
+        parse_rates[source_class] = (
+            round(parsed / len(records), 3) if records else 0.0
+        )
+        findings = [
+            finding
+            for trace in records
+            for finding in trace.get("findings", [])
+        ]
+        usable_count = sum(bool(finding.get("usable")) for finding in findings)
+        usable_finding_rates[source_class] = (
+            round(usable_count / len(findings), 3) if findings else None
+        )
+    return parse_rates, usable_finding_rates
+
+
+def _apply_parse_gates(traces: list[dict]) -> dict:
+    by_class: dict[str, list[dict]] = {}
+    for trace in traces:
+        by_class.setdefault(trace["source_class"], []).append(trace)
+    parse_rates, usable_finding_rates = _quality_rates(traces)
+    for source_class, records in sorted(by_class.items()):
+        rate = parse_rates[source_class]
         if rate < 0.90:
             reason = f"{source_class}_parse_rate_below_0.90"
             if source_class == "codex_guardian":
@@ -47,16 +70,7 @@ def _apply_parse_gates(traces: list[dict]) -> dict:
             for trace in records:
                 trace["theme_eligible"] = False
                 trace["theme_exclusion_reason"] = reason
-        findings = [
-            finding
-            for trace in records
-            for finding in trace.get("findings", [])
-        ]
-        usable_count = sum(bool(finding.get("usable")) for finding in findings)
-        usable_rate = (
-            round(usable_count / len(findings), 3) if findings else None
-        )
-        usable_finding_rates[source_class] = usable_rate
+        usable_rate = usable_finding_rates[source_class]
         if (
             source_class.endswith("_editable")
             and (usable_rate is None or usable_rate < 0.90)
@@ -181,6 +195,9 @@ def _trace(candidate, *, salt: bytes) -> dict:
         # real-data inspection and are not required for Stage 0A accounting.
         "goal_abstract": "",
         "parse_status": parse_status,
+        "review_format": (
+            "qri-v1" if declares_qri_v1(candidate.output) else "legacy-prose"
+        ),
         "finding_count": len(findings),
         "severity_counts": severity_counts,
         "theme_eligible": parse_status == "parsed_findings"
@@ -369,19 +386,6 @@ def collect_review_traces(
         "codex_guardian_session_ids": len(guardian_session_ids),
         "normalized_trace_counts": normalized_trace_counts,
     }
-    trace_by_run_id = {trace["run_id"]: trace for trace in traces}
-    for entry in ledger:
-        trace = trace_by_run_id.get(entry.get("run_id"))
-        if trace is None:
-            continue
-        if trace["theme_eligible"]:
-            entry["theme_status"] = "eligible"
-        else:
-            entry["theme_status"] = "excluded"
-            entry["theme_exclusion_reason"] = trace.get(
-                "theme_exclusion_reason",
-                "unparsed",
-            )
     privacy_findings = [
         {
             "record_id": trace["record_id"],
@@ -418,15 +422,74 @@ def collect_review_traces(
             ).items()
         )
     )
+    post_trailer_traces = [
+        trace
+        for trace in traces
+        if trace["source_class"].endswith("_editable")
+        and trace["review_format"] == "qri-v1"
+    ]
+    summary["post_trailer_editable_runs"] = len(post_trailer_traces)
+    (
+        summary["post_trailer_parse_rates"],
+        summary["post_trailer_usable_finding_rates"],
+    ) = _quality_rates(post_trailer_traces)
+    post_parse_gate_passed = bool(summary["post_trailer_parse_rates"]) and all(
+        rate >= 0.90
+        for rate in summary["post_trailer_parse_rates"].values()
+    )
+    post_usable_gate_passed = bool(
+        summary["post_trailer_usable_finding_rates"]
+    ) and all(
+        rate is not None and rate >= 0.90
+        for rate in summary["post_trailer_usable_finding_rates"].values()
+    )
+    for trace in post_trailer_traces:
+        source_class = trace["source_class"]
+        trace["theme_eligible"] = (
+            trace["parse_status"] == "parsed_findings"
+            and any(
+                finding.get("usable")
+                for finding in trace.get("findings", [])
+            )
+        )
+        if summary["post_trailer_parse_rates"][source_class] < 0.90:
+            trace["theme_eligible"] = False
+            trace["theme_exclusion_reason"] = (
+                f"{source_class}_post_trailer_parse_rate_below_0.90"
+            )
+        elif (
+            summary["post_trailer_usable_finding_rates"][source_class] is None
+            or summary["post_trailer_usable_finding_rates"][source_class]
+            < 0.90
+        ):
+            trace["theme_eligible"] = False
+            trace["theme_exclusion_reason"] = (
+                f"{source_class}_post_trailer_usable_rate_below_0.90"
+            )
+        else:
+            trace.pop("theme_exclusion_reason", None)
     summary["stage1_start_gate_passed"] = (
-        summary["editable_parse_gate_passed"]
-        and summary["editable_usable_gate_passed"]
+        summary["post_trailer_editable_runs"] >= 20
+        and post_parse_gate_passed
+        and post_usable_gate_passed
         and summary["privacy_gate_passed"]
         and summary["ledger_accounted"]
         and summary["source_reconciliation"]["status"]
         == "exact_source_identity_match"
     )
+    trace_by_run_id = {trace["run_id"]: trace for trace in traces}
     for entry in ledger:
+        trace = trace_by_run_id.get(entry.get("run_id"))
+        if trace is not None:
+            if trace["theme_eligible"]:
+                entry["theme_status"] = "eligible"
+                entry.pop("theme_exclusion_reason", None)
+            else:
+                entry["theme_status"] = "excluded"
+                entry["theme_exclusion_reason"] = trace.get(
+                    "theme_exclusion_reason",
+                    "unparsed",
+                )
         entry["schema_version"] = "qri-ledger-v1"
         entry["parser_version"] = PARSER_VERSION
         entry["ledger_id"] = digest(

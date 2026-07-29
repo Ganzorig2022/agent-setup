@@ -51,6 +51,19 @@ def _print_summary(summary: dict, output_dir: pathlib.Path) -> None:
     for source_class, rate in summary["usable_finding_rates"].items():
         rendered = "n/a" if rate is None else f"{rate:.1%}"
         print(f"  {source_class}: {rendered}")
+    print(
+        "post_trailer_editable_runs: "
+        f"{summary['post_trailer_editable_runs']}"
+    )
+    print("post_trailer_parse_rates:")
+    for source_class, rate in summary["post_trailer_parse_rates"].items():
+        print(f"  {source_class}: {rate:.1%}")
+    print("post_trailer_usable_finding_rates:")
+    for source_class, rate in summary[
+        "post_trailer_usable_finding_rates"
+    ].items():
+        rendered = "n/a" if rate is None else f"{rate:.1%}"
+        print(f"  {source_class}: {rendered}")
     print(f"guardian_mode: {summary['guardian_mode']}")
     print(f"privacy_gate_passed: {summary['privacy_gate_passed']}")
     print(f"ledger_accounted: {summary['ledger_accounted']}")

@@ -91,6 +91,7 @@ _QRI_TRAILER = re.compile(
     r"```qri-v1\s*(\[.*?\])\s*```",
     re.DOTALL | re.IGNORECASE,
 )
+_QRI_DECLARATION = re.compile(r"```qri-v1\b", re.IGNORECASE)
 _QRI_CATEGORIES = {
     "ui-correctness",
     "data-integrity",
@@ -114,6 +115,7 @@ _QRI_CATEGORIES = {
     "dependency-config",
     "uncategorized",
 }
+_QRI_SEVERITIES = {"CRITICAL", "HIGH", "MEDIUM", "LOW"}
 _SEVERITY_TABLE_ROW = re.compile(
     r"(?im)^\s*\|\s*(BLOCKER|CRITICAL|MAJOR|HIGH|MEDIUM|MINOR|LOW|NIT)"
     r"\s*\|\s*(\d+)\s*\|"
@@ -136,6 +138,27 @@ class CandidateRun:
     goal: str
     output: str
     source_key: str
+
+
+def declares_qri_v1(output: str) -> bool:
+    return bool(_QRI_DECLARATION.search(output))
+
+
+def _valid_qri_file(value: str) -> bool:
+    if not value:
+        return False
+    if value.startswith(("/", "~")):
+        return False
+    if re.match(r"(?i)^[a-z][a-z0-9+.-]*:", value):
+        return False
+    path = pathlib.PurePosixPath(value)
+    if path.is_absolute() or any(part in {"", ".", ".."} for part in path.parts):
+        return False
+    return True
+
+
+def _qri_abstract_word_count(value: str) -> int:
+    return len(re.findall(r"\b[\w-]+\b", value))
 
 
 def parse_timestamp(value: str) -> dt.datetime | None:
@@ -171,16 +194,17 @@ def extract_findings(output: str) -> tuple[str, list[dict[str, str]]]:
                 for key in ("severity", "category", "abstract", "file")
             ):
                 return "unparsed", []
-            severity = SEVERITY_ALIASES.get(
-                str(item.get("severity") or "").lower()
-            )
+            raw_severity = str(item.get("severity") or "").strip()
+            if raw_severity not in _QRI_SEVERITIES:
+                return "unparsed", []
+            severity = raw_severity.lower()
             abstract = str(item.get("abstract") or "").strip()
             category = str(item.get("category") or "").strip().lower()
             file_value = str(item.get("file") or "").strip()
             if (
-                not severity
-                or not abstract
-                or not file_value
+                not abstract
+                or _qri_abstract_word_count(abstract) < 5
+                or not _valid_qri_file(file_value)
                 or category not in _QRI_CATEGORIES
             ):
                 return "unparsed", []
