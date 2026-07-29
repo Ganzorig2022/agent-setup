@@ -70,6 +70,7 @@ If a user provides a handoff plan, first verify it against repository reality. I
 ## Execution Rules
 
 - Prefer minimal, focused changes.
+- For one-off or infrequent operational work, start with the simplest direct end-to-end path. Add wrappers, control planes, policy layers, custom verifiers, or automation only after a concrete blocker or repeated need justifies them.
 - Follow existing repository conventions.
 - Do not introduce unrelated improvements.
 - Do not rewrite architecture unless explicitly required.

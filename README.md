@@ -26,14 +26,18 @@ resolve on any machine.
 ## Install on a new machine
 
 ```sh
-git clone git@github.com:Ganzorig2022/agent-setup.git ~/agent-stack
-~/agent-stack/install.sh
+git clone git@github.com:Ganzorig2022/agent-setup.git ~/agent-setup
+~/agent-setup/install.sh
 ```
 
 `install.sh` symlinks repo files into `~/.claude`, `~/.codex`, `~/.config/opencode`, and `~`.
-Any pre-existing real file is moved to `~/.agent-stack-backup/<timestamp>/` first. Re-running
+Any pre-existing real file is moved to the owner-only `~/.agent-setup-backup/<timestamp>/`
+first. Re-running
 is a no-op for already-linked paths. Hook paths in `settings.json` use `$HOME`, so they work
 under any username.
+
+Managed hook scripts are linked entry-by-entry instead of linking the whole hooks directory.
+This keeps runtime-only hook logs and caches local and out of the repository.
 
 Then install Claude Code plugins (machine-local state, not synced by this repo):
 
@@ -47,9 +51,9 @@ claude plugin install codex@openai-codex   # /codex:rescue|review|transfer — d
 Because files are symlinks back into this repo, edits made by any tool land in the repo:
 
 ```sh
-cd ~/agent-stack && git add -A && git commit -m "update: …" && git push
+cd ~/agent-setup && git add -A && git commit -m "update: …" && git push
 # on the other Mac:
-cd ~/agent-stack && git pull
+cd ~/agent-setup && git pull
 ```
 
 ## NOT in this repo (recreate per machine — never commit)
@@ -62,6 +66,7 @@ These are secrets or machine-local state, deliberately excluded (see `.gitignore
 | `~/.claude/settings.local.json` | contains local model API token | re-add local tokens by hand |
 | `~/.codex/config.toml` | machine-specific project-trust paths | Codex regenerates / edit locally |
 | `~/.codex/rules/default.rules` | per-machine approval allowlist (had a live JWT) | Codex regenerates on first run |
+| `~/.codex/skills/.system` | Codex-managed built-in skills, refreshed by the CLI | Codex recreates it on startup |
 | `*.sqlite`, `history.jsonl`, sessions, caches | runtime state, large | regenerated automatically |
 
 ## Secret hygiene

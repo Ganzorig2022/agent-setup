@@ -64,6 +64,7 @@ src/
 - **Joi schema at route entry only** — `.required()`, `.valid()`, `.uuid()`, `.max()`, `stripUnknown: true`; never validate in service layer
 - **Service functions have no req/res/next** — they receive plain data and return data or throw
 - **Config from `src/config/`** — never read `process.env` directly inside services or models
+- **`configure()` picks the env block from `SERVER_ENV`, not `NODE_ENV`** (`qpay-micro-service/utils/configure.js`), defaulting to `development`. Blocks seen across old-core: `development | dev | sandbox | prod | prod_new`. A pod can carry `NODE_ENV=sandbox` while running `prod_new` config — `NODE_ENV` is decorative. A wrong value fails narrowly and misleadingly: most hosts fall back to in-cluster service names, so only the few with explicit public-hostname overrides (e.g. S3) break, and code gated on an exact value (`SERVER_ENV === "prod"`) silently never fires. Check the deployment manifest before trusting the env name.
 - **Run `npx eslint --fix` only** — no standalone prettier, no `.prettierrc`
 
 ## Stack C Critical Rules

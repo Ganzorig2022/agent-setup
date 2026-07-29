@@ -14,6 +14,7 @@ id_rsa*
 history.jsonl
 session_index.jsonl
 *.log
+codex/skills/.system/
 
 # ── Local-only Codex config (machine-specific project trust + paths) ─
 config.toml

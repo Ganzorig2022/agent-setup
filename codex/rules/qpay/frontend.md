@@ -68,6 +68,12 @@ Identify: has `antd` ≥ 5.x + `redux` in package.json
 - **Hydration errors** — no `Date.now()`, `Math.random()`, or browser-only APIs at render time
 - **SWR (Gen 1)** — for data fetching; use `axios` for mutations, not `fetch`
 - **Do not mix generations** — do not import Radix into Gen 1/2 or AntD into Gen 2/3
+- **Gen 3 `next/image` on Next 16** — `images.qualities` defaults to `[75]`; any other `quality` value warns at runtime. SVGs are not optimized at all, so `quality` on an SVG is a no-op — drop the prop rather than widening the config. `fill` also needs a positioned parent (`relative`).
+- **`next/image` + Tailwind preflight** — preflight forces `img { height: auto }`, so `width`/`height` props that disagree with the file's intrinsic ratio trigger "width or height modified" warnings. Set them to the real ratio (read the SVG's own `width`/`height`); rendered size does not change.
+- **`next/image` `remotePatterns` — never `hostname: '*'`** — a wildcard turns `/_next/image` into an open proxy that fetches and re-serves any URL, and is the surface for the recurring Image Optimization DoS advisories. If every `src` is a local `/public` path, use `[]`; otherwise list specific hosts. Note Radix `AvatarImage` renders a plain `<img>`, so remote avatars bypass the optimizer and are unaffected by this setting either way.
+- **React 19 types dropped the global `JSX` namespace** — `@types/react` ≥ 19.2.17 removes it, so a bare `JSX.Element` fails typecheck with "Cannot find namespace 'JSX'". Use `React.JSX.Element` (needs `import React` / `import type React from 'react'`). Bites on an in-range `@types/react` **patch** bump, not just majors.
+- **Radix `Avatar` fails silently** — `AvatarFallback` renders on *any* image load/decode failure, so a wrong URL that returns HTML (a redirect to a console/login page) looks identical to "no avatar set". Check the response content-type before suspecting the component or `next/image` config.
+- **Radix controlled/uncontrolled** — `open={a || map[key]}` yields `undefined` when the key is unset, which Radix reads as uncontrolled, then flips to controlled. Coerce with `Boolean()`.
 
 ## Design System (qcore) & Brand Specs
 - **qcore is the canonical QPay web design system.** Source of truth = `qpay-docs-web-v2/src/styles/qcore-tokens.css`. Brand: primary `#004fff`, secondary navy `#002148`, font **Manrope**, semantics success `#00c950` / warning `#f0b100` / danger `#fb2c36`; ships light + dark themes.

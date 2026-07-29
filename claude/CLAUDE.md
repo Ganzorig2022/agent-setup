@@ -6,7 +6,7 @@
 ## Environment
 - Projects: QPay — old-core `/Users/dev/QPay` (Express 5 + Babel JS microservices) · new-core `~/qpay-mn` (Fastify + TypeScript) · Next.js/React frontends (Gen 1–3)
 - Package managers: npm (backends) · frontends vary by generation — check the lockfile (see qpay-context/frontend.md)
-- Models: fable (main — LEAVES subscription plans after 2026-07-07; fallback = opus. If today is past that date and settings.json still says claude-fable-5, tell the user to flip it to opus — headless jobs inherit that default) · haiku (default for subagents via `CLAUDE_CODE_SUBAGENT_MODEL`) · per-agent overrides in agent frontmatter (opus for architect/planner/bug-hunter, sonnet for reviewers)
+- Models: main sessions use the selected/default model · custom subagents use their agent-frontmatter model (opus for architect/planner/bug-hunter, sonnet for reviewers, haiku for lightweight roles) · agents without a model inherit the main session
 
 ## Agent Triggers
 Self-invoked checklist — not automatic. When a trigger below matches, I should spawn the listed agent without waiting to be asked. This is a standing instruction I follow, not a harness guarantee; if a trigger is skipped, say so rather than implying review happened.
@@ -50,7 +50,9 @@ Rule of thumb: need isolation, independence, or parallelism → agent. Need a ch
 - Planner → executor → reviewer for non-trivial work
 - Do not implement when user asks only for a plan
 - Do not run destructive commands
+- Never `git stash` or reinstall deps while the user has a dev server / watcher attached to the working tree — it re-links `node_modules` under the running process and crashes it. Snapshot to the scratchpad instead
 - Prefer minimal, reversible changes
+- For one-off or infrequent operational work, start with the simplest direct end-to-end path. Add wrappers, control planes, policy layers, custom verifiers, or automation only after a concrete blocker or repeated need justifies them
 - Preserve project conventions unless asked to change them
 - Do not review code without inspecting the actual diff
 - Research local patterns + official docs before inventing; reuse over rebuild for auth, payments, uploads, webhooks, integrations
