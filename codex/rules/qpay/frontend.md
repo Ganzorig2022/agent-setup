@@ -61,6 +61,7 @@ Identify: has `antd` ≥ 5.x + `redux` in package.json
 | Gen 3 | none | `eslint.config.mjs` | eslint only |
 
 ## Critical Rules (executors commonly get these wrong)
+- **Pin the package manager — `packageManager` in `package.json`.** Unpinned, `corepack enable` in a Dockerfile resolves the *latest* pnpm at container run time, so an untouched repo breaks when the registry moves. pnpm ≥11 also runs an implicit install before `pnpm run <script>` (`verify-deps-before-run` defaults to `install`), so `CMD ["pnpm","start"]` fails `EACCES` in a non-root app dir (qpay-vendor-web-v2 pods, exit 243, Jul 2026 — code untouched since Dec). Fix: pin `packageManager`, Next `output: "standalone"`, start with `node server.js` — no package manager at runtime. NOT a lockfile problem: pnpm 11 reads `lockfileVersion: '9.0'` fine.
 - **Never mutate Redux state directly** — always use action creators / reducers
 - **Never mutate Zustand state directly** — use `set()` function
 - **AntD Gen 1: top-level imports only** — `import { Button } from 'antd'`, never `antd/lib/button`
@@ -79,4 +80,4 @@ Identify: has `antd` ≥ 5.x + `redux` in package.json
 - **qcore is the canonical QPay web design system.** Source of truth = `qpay-docs-web-v2/src/styles/qcore-tokens.css`. Brand: primary `#004fff`, secondary navy `#002148`, font **Manrope**, semantics success `#00c950` / warning `#f0b100` / danger `#fb2c36`; ships light + dark themes.
 - The `design-tokens.tokens.json` files in `qpay-deps-web` & `qpay-qpaymn-web` are Figma DTCG **export snapshots with different schemas** — not the live system; prefer qcore.
 - **`qpay-ticket-web-v2` deliberately overrides primary to indigo `#615fff`** (in its own `src/styles/globals.css`) while sharing Manrope + navy secondary + success/danger scales. Do not "correct" it to QPay blue.
-- **Brand-spec convention:** repos carry a thin per-repo `design.md` (states only its primary + render target + token-file path) inheriting a global brand core at `~/.claude/qpay-context/design.md`. Present in `qpay-docs-web-v2` and `qpay-ticket-web-v2`. Read the per-repo `design.md` before generating any branded artifact for that repo.
+- **Brand-spec convention:** repos carry a thin per-repo `design.md` (states only its primary + render target + token-file path) inheriting a global brand core at `~/.claude/qpay-context/design.md`. Present in `qpay-docs-web-v2`, `qpay-ticket-web-v2`, and `qpay-vendor-web-v2` (navy `#202754` + **Nunito**, not qcore blue/Manrope — another deliberate divergence; do not "correct" it). Read the per-repo `design.md` before generating any branded artifact for that repo.

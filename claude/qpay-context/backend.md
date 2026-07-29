@@ -58,6 +58,9 @@ src/
 - Environment values in `src/config/` — never access `process.env` directly in services
 - No hardcoded secrets — always via environment config
 
+## Vault CSI — house standard, copy don't invent
+~37 old-core services ship a byte-identical `scripts/docker-entrypoint.sh` that promotes Vault CSI files to env vars: mount `/mnt/secrets`, `SECRETS_PROVIDER` defaults to `env` (non-K8s runs unaffected), fails fast if the mount is missing or empty, skips dotfiles, then `exec`s the real command. Only the final `exec` line is per-service. Cluster side (`SecretProviderClass`, ServiceAccount, Vault role/policy) is sysadmin-owned — never write it into an app repo. Rotation needs a rolling restart (Node reads `process.env` once at boot). Applies to frontends too (qpay-vendor-web-v2 uses it).
+
 ## Stack A/B Critical Rules (executors commonly get these wrong)
 - **No try/catch in route handlers** — Express 5 catches async throws natively; adding try/catch is wrong
 - **Use `qpay-micro-logging`, never `console.log`** — this is the internal logging package
