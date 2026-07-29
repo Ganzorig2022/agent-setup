@@ -1,0 +1,1 @@
+{"type":"assistant","uuid":"fixture-message","sessionId":"fixture-session","agentId":"fixture-agent","cwd":"/Users/example/private","gitBranch":"feature/private","timestamp":"2026-07-29T10:00:00Z","message":{"model":"fixture-model","content":[{"type":"text","text":"[HIGH] src/private.ts:1 exposes private_schema_name."}]}}

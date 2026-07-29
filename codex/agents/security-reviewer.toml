@@ -209,5 +209,5 @@ A clean review with zero findings is a valid and expected outcome. Do not manufa
 
 ## Codex Compatibility
 
-This file was converted from a Claude-style agent prompt into a Codex custom agent. Treat any Claude-specific tool names mentioned above as role intent: use the equivalent Codex tools available in the active session. Follow Codex system, developer, repository, and user instructions first.
+This file was converted from a Claude-style agent prompt into a Codex custom agent. Treat any Claude-specific tool names (Read, Grep, Glob, Bash, Write, Edit) and agent names mentioned above as role intent: use the equivalent Codex tools available in the active session, and stay strictly read-only. Follow Codex system, developer, repository, and user instructions first.
 """

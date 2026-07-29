@@ -165,6 +165,10 @@ link home/.local/bin/agent-setup-audit.py         "$HOME/.local/bin/agent-setup-
 link home/Library/LaunchAgents/com.dev.agent-setup-audit.plist \
                                                  "$HOME/Library/LaunchAgents/com.dev.agent-setup-audit.plist"
 
+echo "== Manual tooling (review-intelligence Stage 0A harvester) =="
+link scripts/review-intel-harvest.py              "$HOME/.local/bin/review-intel-harvest.py"
+link scripts/review_intel                         "$HOME/.local/bin/review_intel"
+
 echo
 echo "Done. Backups (if any) under: $BACKUP"
 echo "NOTE: after install, load the schedules once:"

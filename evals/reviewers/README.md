@@ -77,6 +77,69 @@ explicit inline agent JSON wins.
   underlying model updates, without any prompt change. Re-baseline after
   model-version changes, not after every drift.
 
+## Real-world theme harvesting (not a quality metric)
+
+`review-intel-harvest.py` is the local, stdlib-only Stage 0A collector for
+reviewer traces. It stores redacted run and finding metadata under
+`~/.review-intelligence/`; it never stores raw transcripts, calls a model,
+uses the network, changes a reviewer prompt, or writes `baseline.json`,
+`truth.json`, or `scores.jsonl`. Its output must never be reused as few-shot
+reviewer examples.
+Free-form task descriptions are not persisted; the first real-data inspection
+showed that even redacted titles retained too much identifying context.
+
+Records are append-only and stamped with both `schema_version` and
+`parser_version`. A parser revision creates a new record for the same stable
+run ID. The collection ledger records every included or skipped source and
+explicitly marks theme exclusions. Codex guardian output remains prose-only:
+guardian is collapsed to one record per parent session, contributes run counts
+only, and is excluded from future themes.
+
+Parse rate only measures whether a run can be classified as findings or a
+clean review. It is not sufficient evidence that extracted findings are
+useful. The separate usable-finding rate requires a controlled category, an
+abstract of at least five tokens, and a non-heading/non-summary source.
+
+Stage gates are deliberately separate:
+
+- **Stage 0A acceptance:** a clean full-line privacy inspection, an accounted
+  collection ledger, exact reconciliation between normalized traces and
+  stable source identities, and at least 90% usable-finding rate for every
+  editable source class. Guardian may pass as session-count-only.
+- **Start Stage 1 only on post-trailer evidence:** at least 20 editable
+  `qri-v1` runs, with at least 90% parse rate and 90% usable-finding rate for
+  every editable source class. The pre-trailer backlog is advisory input and
+  counts neither for nor against this gate: its Claude half expires after 30
+  days, and episode-local legacy formats have no long-run value.
+- Codex `subagent-usage.log` is advisory telemetry, not a run ledger: the
+  notifier writes another cumulative token snapshot whenever a live rollout
+  changes. Event counts therefore exceed unique reviewer sources and are
+  printed for diagnosis but do not replace source-identity reconciliation.
+- **Keep Stage 1 only after three manual reports if:** at least three themes
+  each recur across at least two repository hashes and two session hashes,
+  and at least one is not represented by an existing `truth.json` bug ID.
+  Otherwise shelve and remove the analysis layer.
+
+The two-repository/two-session recurrence floor remains the minimum
+anti-concentration guard. With roughly 49 editable runs it is demanding but
+reachable; do not weaken it merely to manufacture three surviving themes.
+The Stage 0A corpus had only 22 finding-bearing runs and 79 findings; 24 runs
+were clean approvals. Claude covered six repository hashes and Codex three,
+with only one overlap, so Stage 1 must not require or imply cross-provider
+corroboration.
+
+Before any future `qri-v1` trailer is added to editable reviewer prompts,
+Stage 0B must first run and commit a fresh control:
+
+```sh
+agent-evals.py --full --save-baseline
+```
+
+Only then add the trailer, run the identical full eval again, and commit both
+auditable results. This separates format effects from CLI/model drift.
+Cross-provider disagreement, scheduling, analysis, clustering, embeddings,
+Telegram delivery, and prompt/baseline mutation are outside Stage 0A.
+
 ## Growing the set
 
 Best source of new tasks: real production bugs. After fixing one, distill it

@@ -1,0 +1,4 @@
+Inspect /Users/example/private/src/payment_engine.ts and private_schema_name.
+Contact owner@example.com at https://internal.example/path using token=secret-value.
+The CustomerLedger class connects to 10.0.0.8.
+MIN_ACTIONABLE_CHARS and console.log must not survive either.

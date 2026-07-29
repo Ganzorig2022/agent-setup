@@ -1,0 +1,2 @@
+{"timestamp":"2026-07-29T08:00:00Z","type":"session_meta","payload":{"id":"fixture-string-union","session_id":"fixture-string-union","cwd":"/Users/example/private","source":{"subagent":"review"},"thread_source":"subagent"}}
+{"timestamp":"2026-07-29T08:01:00Z","type":"event_msg","payload":{"type":"task_complete","turn_id":"fixture-string-turn","last_agent_message":"No verified findings."}}

@@ -1,0 +1,3 @@
+{"timestamp":"2026-07-29T09:00:00Z","type":"session_meta","payload":{"id":"fixture-guardian","session_id":"fixture-guardian","parent_thread_id":"fixture-parent","cwd":"/Users/example/private","source":{"subagent":{"other":"guardian"}},"thread_source":"subagent"}}
+{"timestamp":"2026-07-29T09:01:00Z","type":"event_msg","payload":{"type":"task_complete","turn_id":"fixture-guardian-clean","last_agent_message":"No verified findings."}}
+{"timestamp":"2026-07-29T09:02:00Z","type":"event_msg","payload":{"type":"task_complete","turn_id":"fixture-guardian-unparsed","last_agent_message":"Looks reasonable to me."}}

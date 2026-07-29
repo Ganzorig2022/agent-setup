@@ -14,12 +14,13 @@ CLAUDE_AGENTS = HOME / ".claude/agents"
 CODEX_AGENTS = HOME / ".codex/agents"
 DEFENSE = (HOME / ".claude/prompt-defense.md").read_text().strip()
 
-# skip bug-hunter + security-reviewer: already in sync with their .md sources
 AGENTS = [
-    "architect", "build-error-resolver", "code-reviewer", "database-reviewer",
+    "architect", "bug-hunter", "build-error-resolver", "code-reviewer",
+    "database-reviewer",
     "doc-updater", "e2e-runner", "flutter-reviewer", "goal-verifier",
     "performance-optimizer", "planner", "react-reviewer", "refactor-cleaner",
-    "silent-failure-hunter", "tdd-guide", "typescript-reviewer",
+    "security-reviewer", "silent-failure-hunter", "tdd-guide",
+    "typescript-reviewer",
 ]
 
 NEW_AGENT_DEFAULTS = {

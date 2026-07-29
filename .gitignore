@@ -13,6 +13,9 @@ id_rsa*
 *.sqlite-*
 history.jsonl
 session_index.jsonl
+traces.jsonl
+review-intelligence/
+.review-intelligence/
 *.log
 codex/skills/.system/
 
@@ -21,6 +24,8 @@ config.toml
 
 # ── Build / OS / editor junk ────────────────────────────────────────
 node_modules/
+__pycache__/
+*.pyc
 *.backup.*
 *.bak
 .DS_Store
