@@ -20,6 +20,11 @@ from .redact import digest, privacy_violations, redact_text
 from .taxonomy import categorize_finding, finding_usability
 from .usage import reconcile_usage_logs
 
+EDITABLE_SOURCE_CLASSES = ("claude_editable", "codex_editable")
+POST_TRAILER_GATE_MINIMUM_EVIDENCE_RUNS = 5
+POST_TRAILER_GATE_RATE_THRESHOLD = 0.90
+STAGE1_MINIMUM_POST_TRAILER_RUNS = 20
+
 
 @dataclass
 class CollectionResult:
@@ -54,6 +59,14 @@ def _quality_rates(
             round(usable_count / len(findings), 3) if findings else None
         )
     return parse_rates, usable_finding_rates
+
+
+def _gate_state(rate: float | None, evidence_count: int) -> str:
+    if evidence_count < POST_TRAILER_GATE_MINIMUM_EVIDENCE_RUNS:
+        return "insufficient_evidence"
+    if rate is not None and rate >= POST_TRAILER_GATE_RATE_THRESHOLD:
+        return "passed"
+    return "failed"
 
 
 def _apply_parse_gates(traces: list[dict]) -> dict:
@@ -415,22 +428,44 @@ def collect_review_traces(
         and trace["review_format"] == "qri-v1"
     ]
     summary["post_trailer_editable_runs"] = len(post_trailer_traces)
+    summary["post_trailer_gate_minimum_evidence_runs"] = (
+        POST_TRAILER_GATE_MINIMUM_EVIDENCE_RUNS
+    )
+    summary["post_trailer_runs_by_class"] = {
+        source_class: sum(
+            trace["source_class"] == source_class
+            for trace in post_trailer_traces
+        )
+        for source_class in EDITABLE_SOURCE_CLASSES
+    }
+    summary["post_trailer_finding_bearing_runs_by_class"] = {
+        source_class: sum(
+            trace["source_class"] == source_class
+            and bool(trace.get("findings"))
+            for trace in post_trailer_traces
+        )
+        for source_class in EDITABLE_SOURCE_CLASSES
+    }
     (
         summary["post_trailer_parse_rates"],
         summary["post_trailer_usable_finding_rates"],
     ) = _quality_rates(post_trailer_traces)
-    post_parse_gate_passed = bool(summary["post_trailer_parse_rates"]) and all(
-        rate >= 0.90
-        for rate in summary["post_trailer_parse_rates"].values()
-    )
-    post_usable_gate_passed = bool(
-        summary["post_trailer_usable_finding_rates"]
-    ) and all(
-        rate is not None and rate >= 0.90
-        for rate in summary["post_trailer_usable_finding_rates"].values()
-    )
-    summary["post_trailer_parse_gate_passed"] = post_parse_gate_passed
-    summary["post_trailer_usable_gate_passed"] = post_usable_gate_passed
+    summary["post_trailer_parse_gate_states"] = {
+        source_class: _gate_state(
+            summary["post_trailer_parse_rates"].get(source_class),
+            summary["post_trailer_runs_by_class"][source_class],
+        )
+        for source_class in EDITABLE_SOURCE_CLASSES
+    }
+    summary["post_trailer_usable_gate_states"] = {
+        source_class: _gate_state(
+            summary["post_trailer_usable_finding_rates"].get(source_class),
+            summary["post_trailer_finding_bearing_runs_by_class"][
+                source_class
+            ],
+        )
+        for source_class in EDITABLE_SOURCE_CLASSES
+    }
     for trace in post_trailer_traces:
         source_class = trace["source_class"]
         trace["theme_eligible"] = (
@@ -456,15 +491,62 @@ def collect_review_traces(
             )
         else:
             trace.pop("theme_exclusion_reason", None)
-    summary["stage1_start_gate_passed"] = (
-        summary["post_trailer_editable_runs"] >= 20
-        and post_parse_gate_passed
-        and post_usable_gate_passed
-        and summary["privacy_gate_passed"]
-        and summary["ledger_accounted"]
-        and summary["source_reconciliation"]["status"]
-        == "exact_source_identity_match"
-    )
+    blockers: list[dict] = []
+    if (
+        summary["post_trailer_editable_runs"]
+        < STAGE1_MINIMUM_POST_TRAILER_RUNS
+    ):
+        blockers.append(
+            {
+                "gate": "post_trailer_editable_runs",
+                "state": "insufficient_evidence",
+                "qualifying_runs": summary["post_trailer_editable_runs"],
+                "minimum_qualifying_runs": STAGE1_MINIMUM_POST_TRAILER_RUNS,
+            }
+        )
+    for source_class in EDITABLE_SOURCE_CLASSES:
+        for gate, states_key, counts_key, rates_key in (
+            (
+                "parse",
+                "post_trailer_parse_gate_states",
+                "post_trailer_runs_by_class",
+                "post_trailer_parse_rates",
+            ),
+            (
+                "usable_finding",
+                "post_trailer_usable_gate_states",
+                "post_trailer_finding_bearing_runs_by_class",
+                "post_trailer_usable_finding_rates",
+            ),
+        ):
+            state = summary[states_key][source_class]
+            if state == "passed":
+                continue
+            blockers.append(
+                {
+                    "gate": gate,
+                    "source_class": source_class,
+                    "state": state,
+                    "qualifying_runs": summary[counts_key][source_class],
+                    "minimum_qualifying_runs": (
+                        POST_TRAILER_GATE_MINIMUM_EVIDENCE_RUNS
+                    ),
+                    "rate": summary[rates_key].get(source_class),
+                }
+            )
+    if not summary["privacy_gate_passed"]:
+        blockers.append({"gate": "privacy", "state": "failed"})
+    if not summary["ledger_accounted"]:
+        blockers.append({"gate": "ledger", "state": "failed"})
+    if (
+        summary["source_reconciliation"]["status"]
+        != "exact_source_identity_match"
+    ):
+        blockers.append(
+            {"gate": "source_reconciliation", "state": "failed"}
+        )
+    summary["stage1_start_gate_blockers"] = blockers
+    summary["stage1_start_gate_passed"] = not blockers
     trace_by_run_id = {trace["run_id"]: trace for trace in traces}
     for entry in ledger:
         trace = trace_by_run_id.get(entry.get("run_id"))

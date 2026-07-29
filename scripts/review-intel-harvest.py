@@ -59,6 +59,20 @@ def _print_summary(summary: dict, output_dir: pathlib.Path) -> None:
         "post_trailer_editable_runs: "
         f"{summary['post_trailer_editable_runs']}"
     )
+    print(
+        "post_trailer_gate_minimum_evidence_runs: "
+        f"{summary['post_trailer_gate_minimum_evidence_runs']}"
+    )
+    print("post_trailer_runs_by_class:")
+    for source_class, count in summary[
+        "post_trailer_runs_by_class"
+    ].items():
+        print(f"  {source_class}: {count}")
+    print("post_trailer_finding_bearing_runs_by_class:")
+    for source_class, count in summary[
+        "post_trailer_finding_bearing_runs_by_class"
+    ].items():
+        print(f"  {source_class}: {count}")
     print("post_trailer_parse_rates:")
     for source_class, rate in summary["post_trailer_parse_rates"].items():
         print(f"  {source_class}: {rate:.1%}")
@@ -68,14 +82,16 @@ def _print_summary(summary: dict, output_dir: pathlib.Path) -> None:
     ].items():
         rendered = "n/a" if rate is None else f"{rate:.1%}"
         print(f"  {source_class}: {rendered}")
-    print(
-        "post_trailer_parse_gate_passed: "
-        f"{summary['post_trailer_parse_gate_passed']}"
-    )
-    print(
-        "post_trailer_usable_gate_passed: "
-        f"{summary['post_trailer_usable_gate_passed']}"
-    )
+    print("post_trailer_parse_gate_states:")
+    for source_class, state in summary[
+        "post_trailer_parse_gate_states"
+    ].items():
+        print(f"  {source_class}: {state}")
+    print("post_trailer_usable_gate_states:")
+    for source_class, state in summary[
+        "post_trailer_usable_gate_states"
+    ].items():
+        print(f"  {source_class}: {state}")
     print(f"guardian_mode: {summary['guardian_mode']}")
     print(f"privacy_gate_passed: {summary['privacy_gate_passed']}")
     print(f"ledger_accounted: {summary['ledger_accounted']}")
@@ -97,6 +113,9 @@ def _print_summary(summary: dict, output_dir: pathlib.Path) -> None:
         f"sessions={source_reconciliation['codex_guardian_session_ids']}"
     )
     print(f"stage1_start_gate_passed: {summary['stage1_start_gate_passed']}")
+    print("stage1_start_gate_blockers:")
+    for blocker in summary["stage1_start_gate_blockers"]:
+        print(f"  {json.dumps(blocker, sort_keys=True)}")
 
 
 def main() -> int:

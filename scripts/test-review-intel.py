@@ -26,6 +26,76 @@ SALT = b"test-salt"
 FIXTURES = pathlib.Path(__file__).resolve().parent / "fixtures/review-intel"
 
 
+def _write_claude_review(
+    home: pathlib.Path,
+    *,
+    index: int,
+    output: str,
+) -> None:
+    subagents = home / ".claude/projects/project/session/subagents"
+    subagents.mkdir(parents=True, exist_ok=True)
+    agent_id = f"gate-claude-{index}"
+    (subagents / f"agent-{agent_id}.meta.json").write_text(
+        json.dumps({"agentType": "code-reviewer", "description": "Review"})
+    )
+    (subagents / f"agent-{agent_id}.jsonl").write_text(
+        json.dumps(
+            {
+                "type": "assistant",
+                "uuid": f"gate-message-{index}",
+                "sessionId": "gate-claude-session",
+                "agentId": agent_id,
+                "timestamp": "2026-07-29T11:00:00Z",
+                "message": {"content": [{"type": "text", "text": output}]},
+            }
+        )
+        + "\n"
+    )
+
+
+def _write_codex_review(
+    home: pathlib.Path,
+    *,
+    index: int,
+    output: str,
+) -> None:
+    sessions = home / ".codex/sessions/2026/07/29"
+    sessions.mkdir(parents=True, exist_ok=True)
+    records = [
+        {
+            "timestamp": "2026-07-29T10:00:00Z",
+            "type": "session_meta",
+            "payload": {
+                "id": f"gate-codex-session-{index}",
+                "session_id": f"gate-codex-session-{index}",
+                "parent_thread_id": "gate-codex-parent",
+                "cwd": "/Users/dev/QPay/web",
+                "source": {
+                    "subagent": {
+                        "thread_spawn": {
+                            "agent_role": "code-reviewer",
+                            "parent_thread_id": "gate-codex-parent",
+                        }
+                    }
+                },
+                "thread_source": "subagent",
+            },
+        },
+        {
+            "timestamp": "2026-07-29T10:01:00Z",
+            "type": "event_msg",
+            "payload": {
+                "type": "task_complete",
+                "turn_id": f"gate-turn-{index}",
+                "last_agent_message": output,
+            },
+        },
+    ]
+    (sessions / f"rollout-gate-{index}.jsonl").write_text(
+        "\n".join(json.dumps(record) for record in records) + "\n"
+    )
+
+
 class ReviewIntelTests(unittest.TestCase):
     def test_extracts_structured_qri_v1_findings(self) -> None:
         output = """Human-readable review.
@@ -245,44 +315,167 @@ class ReviewIntelTests(unittest.TestCase):
                 result.summary["post_trailer_editable_runs"],
                 0,
             )
+            self.assertEqual(
+                result.summary["post_trailer_runs_by_class"],
+                {"claude_editable": 0, "codex_editable": 0},
+            )
+            self.assertEqual(
+                result.summary["post_trailer_parse_gate_states"],
+                {
+                    "claude_editable": "insufficient_evidence",
+                    "codex_editable": "insufficient_evidence",
+                },
+            )
+            self.assertEqual(
+                result.summary["post_trailer_usable_gate_states"],
+                {
+                    "claude_editable": "insufficient_evidence",
+                    "codex_editable": "insufficient_evidence",
+                },
+            )
+            self.assertEqual(
+                result.summary["post_trailer_gate_minimum_evidence_runs"],
+                5,
+            )
+            self.assertNotIn(
+                "post_trailer_parse_gate_passed",
+                result.summary,
+            )
+            self.assertNotIn(
+                "post_trailer_usable_gate_passed",
+                result.summary,
+            )
+            self.assertFalse(result.summary["stage1_start_gate_passed"])
+
+    def test_clean_codex_runs_are_parse_evidence_but_not_usable_evidence(
+        self,
+    ) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            home = pathlib.Path(tmp)
+            sessions = home / ".codex/sessions/2026/07/29"
+            sessions.mkdir(parents=True)
+            for index in range(5):
+                records = [
+                    {
+                        "timestamp": "2026-07-29T10:00:00Z",
+                        "type": "session_meta",
+                        "payload": {
+                            "id": f"codex-session-clean-{index}",
+                            "session_id": f"codex-session-clean-{index}",
+                            "parent_thread_id": "parent-clean",
+                            "cwd": "/Users/dev/QPay/web",
+                            "source": {
+                                "subagent": {
+                                    "thread_spawn": {
+                                        "agent_role": "code-reviewer",
+                                        "parent_thread_id": "parent-clean",
+                                    }
+                                }
+                            },
+                            "thread_source": "subagent",
+                        },
+                    },
+                    {
+                        "timestamp": "2026-07-29T10:01:00Z",
+                        "type": "event_msg",
+                        "payload": {
+                            "type": "task_complete",
+                            "turn_id": f"turn-clean-{index}",
+                            "last_agent_message": (
+                                "No findings.\n\n```qri-v1\n[]\n```"
+                            ),
+                        },
+                    },
+                ]
+                (sessions / f"rollout-clean-{index}.jsonl").write_text(
+                    "\n".join(json.dumps(record) for record in records) + "\n"
+                )
+
+            result = collect_review_traces(
+                home=home,
+                since_days=30,
+                now=NOW,
+                salt=SALT,
+            )
+
+            self.assertEqual(
+                result.summary["post_trailer_runs_by_class"],
+                {"claude_editable": 0, "codex_editable": 5},
+            )
+            self.assertEqual(
+                result.summary[
+                    "post_trailer_finding_bearing_runs_by_class"
+                ],
+                {"claude_editable": 0, "codex_editable": 0},
+            )
+            self.assertEqual(
+                result.summary["post_trailer_parse_gate_states"],
+                {
+                    "claude_editable": "insufficient_evidence",
+                    "codex_editable": "passed",
+                },
+            )
+            self.assertEqual(
+                result.summary["post_trailer_usable_gate_states"],
+                {
+                    "claude_editable": "insufficient_evidence",
+                    "codex_editable": "insufficient_evidence",
+                },
+            )
+            self.assertEqual(
+                result.summary["stage1_start_gate_blockers"],
+                [
+                    {
+                        "gate": "post_trailer_editable_runs",
+                        "state": "insufficient_evidence",
+                        "qualifying_runs": 5,
+                        "minimum_qualifying_runs": 20,
+                    },
+                    {
+                        "gate": "parse",
+                        "source_class": "claude_editable",
+                        "state": "insufficient_evidence",
+                        "qualifying_runs": 0,
+                        "minimum_qualifying_runs": 5,
+                        "rate": None,
+                    },
+                    {
+                        "gate": "usable_finding",
+                        "source_class": "claude_editable",
+                        "state": "insufficient_evidence",
+                        "qualifying_runs": 0,
+                        "minimum_qualifying_runs": 5,
+                        "rate": None,
+                    },
+                    {
+                        "gate": "usable_finding",
+                        "source_class": "codex_editable",
+                        "state": "insufficient_evidence",
+                        "qualifying_runs": 0,
+                        "minimum_qualifying_runs": 5,
+                        "rate": None,
+                    },
+                ],
+            )
             self.assertFalse(result.summary["stage1_start_gate_passed"])
 
     def test_stage1_gate_uses_only_post_trailer_quality_rates(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
             home = pathlib.Path(tmp)
-            subagents = home / ".claude/projects/project/session/subagents"
-            subagents.mkdir(parents=True)
             trailer = (
                 "Human review.\n\n```qri-v1\n"
                 '[{"severity":"HIGH","category":"validation",'
                 '"abstract":"Missing route validation allows unsafe request input",'
                 '"file":"route.js"}]\n```'
             )
-            for index in range(25):
-                agent_id = f"review-{index}"
-                (subagents / f"agent-{agent_id}.meta.json").write_text(
-                    json.dumps(
-                        {
-                            "agentType": "code-reviewer",
-                            "description": "Review",
-                        }
-                    )
-                )
-                output = trailer if index < 20 else "Unstructured legacy prose."
-                (subagents / f"agent-{agent_id}.jsonl").write_text(
-                    json.dumps(
-                        {
-                            "type": "assistant",
-                            "uuid": f"message-{index}",
-                            "sessionId": "mixed-session",
-                            "agentId": agent_id,
-                            "timestamp": "2026-07-29T11:00:00Z",
-                            "message": {
-                                "content": [{"type": "text", "text": output}]
-                            },
-                        }
-                    )
-                    + "\n"
+            for index in range(10):
+                _write_claude_review(home, index=index, output=trailer)
+                _write_codex_review(home, index=index, output=trailer)
+            for index in range(5):
+                _write_claude_review(
+                    home,
+                    index=100 + index,
+                    output="Unstructured legacy prose.",
                 )
 
             result = collect_review_traces(
@@ -294,32 +487,142 @@ class ReviewIntelTests(unittest.TestCase):
                 20,
             )
             self.assertEqual(
+                result.summary["post_trailer_runs_by_class"],
+                {"claude_editable": 10, "codex_editable": 10},
+            )
+            self.assertEqual(
+                result.summary[
+                    "post_trailer_finding_bearing_runs_by_class"
+                ],
+                {"claude_editable": 10, "codex_editable": 10},
+            )
+            self.assertEqual(
                 result.summary["post_trailer_parse_rates"],
-                {"claude_editable": 1.0},
+                {"claude_editable": 1.0, "codex_editable": 1.0},
             )
             self.assertEqual(
                 result.summary["post_trailer_usable_finding_rates"],
-                {"claude_editable": 1.0},
+                {"claude_editable": 1.0, "codex_editable": 1.0},
             )
             self.assertEqual(
                 result.summary["advisory_lifetime_parse_rates"],
-                {"claude_editable": 0.8},
+                {"claude_editable": 0.667, "codex_editable": 1.0},
             )
             self.assertEqual(
                 result.summary["advisory_lifetime_usable_finding_rates"],
-                {"claude_editable": 1.0},
+                {"claude_editable": 1.0, "codex_editable": 1.0},
             )
-            self.assertTrue(
-                result.summary["post_trailer_parse_gate_passed"]
+            self.assertEqual(
+                result.summary["post_trailer_parse_gate_states"],
+                {"claude_editable": "passed", "codex_editable": "passed"},
             )
-            self.assertTrue(
-                result.summary["post_trailer_usable_gate_passed"]
+            self.assertEqual(
+                result.summary["post_trailer_usable_gate_states"],
+                {"claude_editable": "passed", "codex_editable": "passed"},
             )
             self.assertNotIn("parse_rates", result.summary)
             self.assertNotIn("usable_finding_rates", result.summary)
             self.assertNotIn("editable_parse_gate_passed", result.summary)
             self.assertNotIn("editable_usable_gate_passed", result.summary)
+            self.assertNotIn(
+                "post_trailer_parse_gate_passed",
+                result.summary,
+            )
+            self.assertNotIn(
+                "post_trailer_usable_gate_passed",
+                result.summary,
+            )
+            self.assertEqual(
+                result.summary["stage1_start_gate_blockers"],
+                [],
+            )
             self.assertTrue(result.summary["stage1_start_gate_passed"])
+
+    def test_post_trailer_gate_reports_measured_failures_per_class(
+        self,
+    ) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            home = pathlib.Path(tmp)
+            usable = (
+                "```qri-v1\n"
+                '[{"severity":"HIGH","category":"validation",'
+                '"abstract":"Missing route validation allows unsafe request input",'
+                '"file":"route.js"}]\n```'
+            )
+            unusable = (
+                "```qri-v1\n"
+                '[{"severity":"LOW","category":"test-eval",'
+                '"abstract":"This is informational and not a bug",'
+                '"file":"review.js"}]\n```'
+            )
+            malformed = "```qri-v1\nnot-json\n```"
+            outputs = [usable, usable, usable, usable, unusable, malformed]
+            for index, output in enumerate(outputs):
+                _write_claude_review(home, index=index, output=output)
+                _write_codex_review(home, index=index, output=output)
+
+            result = collect_review_traces(
+                home=home,
+                since_days=30,
+                now=NOW,
+                salt=SALT,
+            )
+
+            self.assertEqual(
+                result.summary["post_trailer_runs_by_class"],
+                {"claude_editable": 6, "codex_editable": 6},
+            )
+            self.assertEqual(
+                result.summary[
+                    "post_trailer_finding_bearing_runs_by_class"
+                ],
+                {"claude_editable": 5, "codex_editable": 5},
+            )
+            self.assertEqual(
+                result.summary["post_trailer_parse_gate_states"],
+                {"claude_editable": "failed", "codex_editable": "failed"},
+            )
+            self.assertEqual(
+                result.summary["post_trailer_usable_gate_states"],
+                {"claude_editable": "failed", "codex_editable": "failed"},
+            )
+            self.assertFalse(result.summary["stage1_start_gate_passed"])
+
+    def test_under_minimum_evidence_never_reports_failure(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            home = pathlib.Path(tmp)
+            unusable = (
+                "```qri-v1\n"
+                '[{"severity":"LOW","category":"test-eval",'
+                '"abstract":"This is informational and not a bug",'
+                '"file":"review.js"}]\n```'
+            )
+            for index in range(4):
+                _write_claude_review(home, index=index, output=unusable)
+
+            result = collect_review_traces(
+                home=home,
+                since_days=30,
+                now=NOW,
+                salt=SALT,
+            )
+
+            self.assertEqual(
+                result.summary["post_trailer_usable_finding_rates"],
+                {"claude_editable": 0.0},
+            )
+            self.assertEqual(
+                result.summary["post_trailer_parse_gate_states"][
+                    "claude_editable"
+                ],
+                "insufficient_evidence",
+            )
+            self.assertEqual(
+                result.summary["post_trailer_usable_gate_states"][
+                    "claude_editable"
+                ],
+                "insufficient_evidence",
+            )
 
     def test_usable_finding_rate_requires_category_and_substantive_abstract(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:

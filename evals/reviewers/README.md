@@ -124,8 +124,21 @@ Stage gates are deliberately separate:
   counts neither for nor against this gate: its Claude half expires after 30
   days, and episode-local legacy formats have no long-run value.
 - Summary fields prefixed with `advisory_lifetime_` describe the append-only
-  historical corpus and are not gates. Only the `post_trailer_*_gate_passed`
-  flags feed `stage1_start_gate_passed`.
+  historical corpus and are not gates. Post-trailer gates are evaluated
+  separately for `claude_editable` and `codex_editable`; guardian remains
+  session-count-only and is excluded.
+- Each per-class gate reports `passed`, `failed`, or `insufficient_evidence`.
+  A gate needs at least five qualifying runs before it may pass or fail.
+  Parse evidence includes every post-trailer run. Usable-finding evidence
+  includes only post-trailer runs that produced at least one finding; clean
+  approvals do not measure extraction quality. The summary exposes both
+  `post_trailer_runs_by_class` and
+  `post_trailer_finding_bearing_runs_by_class`.
+- `stage1_start_gate_passed` is true only when the 20-run total is met and
+  both editable classes pass both gates, plus the existing privacy, ledger,
+  and source-identity checks. `stage1_start_gate_blockers` records every
+  failure or evidence shortfall; `insufficient_evidence` is never treated as
+  a failure or a pass.
 - Codex `subagent-usage.log` is advisory telemetry, not a run ledger: the
   notifier writes another cumulative token snapshot whenever a live rollout
   changes. Event counts therefore exceed unique reviewer sources and are
