@@ -6,6 +6,18 @@ QPay runs two parallel codebases — always know which one you're in:
 - **New core** — the **github.com/qpay-mn** org, cloned to `~/qpay-mn`. Predominantly **Fastify + TypeScript + Zod** (Stack C) services + shared `qpay-lib-*` packages; Gen-3 (Next/React/Zustand/Radix) web apps.
 - Harvested architecture docs for both live in the **private** `knowledge-base` vault under `qpay/old-core/` and `qpay/new-core/`, queryable via the `qmd` MCP. Refresh with `qpay-gem-harvest.py`.
 
+## CI — the QPay GitLab server does NOT use `.gitlab-ci.yml`
+`git.qpay.mn` runs no GitLab CI pipelines. Old-core repos carry no `.gitlab-ci.yml`, and adding
+one is not the house pattern — **never propose a GitLab CI job** as the place to enforce lint,
+typecheck, tests, or builds in these repos. Applies to frontends too.
+
+Consequence when picking where a check goes: the only non-skippable gate in an old-core repo is
+the image build itself (`deployment/Dockerfile`) — if a `RUN` step fails, no image exists. A
+`.husky/` pre-commit hook is local and bypassable (`git commit --no-verify`, or any fresh clone
+before `pnpm install` fires husky's `prepare`), so moving a check out of the Dockerfile and into
+a hook downgrades it from enforced to advisory. Say so explicitly rather than treating the two
+as equivalent.
+
 ## Three Backend Stacks
 
 ### Stack A — Classic QPay (most qpay-* services)
