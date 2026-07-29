@@ -91,7 +91,29 @@ _QRI_TRAILER = re.compile(
     r"```qri-v1\s*(\[.*?\])\s*```",
     re.DOTALL | re.IGNORECASE,
 )
-_CATEGORY = re.compile(r"^[a-z0-9][a-z0-9-]{0,39}$")
+_QRI_CATEGORIES = {
+    "ui-correctness",
+    "data-integrity",
+    "matching-correctness",
+    "compatibility",
+    "delivery-reliability",
+    "feature-gating",
+    "injection",
+    "validation",
+    "race-idempotency",
+    "error-handling",
+    "transaction-integrity",
+    "secret-exposure",
+    "authorization",
+    "type-safety",
+    "accessibility",
+    "performance",
+    "observability",
+    "test-eval",
+    "lifecycle-cleanup",
+    "dependency-config",
+    "uncategorized",
+}
 _SEVERITY_TABLE_ROW = re.compile(
     r"(?im)^\s*\|\s*(BLOCKER|CRITICAL|MAJOR|HIGH|MEDIUM|MINOR|LOW|NIT)"
     r"\s*\|\s*(\d+)\s*\|"
@@ -137,22 +159,36 @@ def extract_findings(output: str) -> tuple[str, list[dict[str, str]]]:
             return "unparsed", []
         structured: list[dict[str, str]] = []
         for item in payload:
-            if not isinstance(item, dict):
+            if not isinstance(item, dict) or set(item) != {
+                "severity",
+                "category",
+                "abstract",
+                "file",
+            }:
+                return "unparsed", []
+            if not all(
+                isinstance(item[key], str)
+                for key in ("severity", "category", "abstract", "file")
+            ):
                 return "unparsed", []
             severity = SEVERITY_ALIASES.get(
                 str(item.get("severity") or "").lower()
             )
             abstract = str(item.get("abstract") or "").strip()
             category = str(item.get("category") or "").strip().lower()
-            if not severity or not abstract:
+            file_value = str(item.get("file") or "").strip()
+            if (
+                not severity
+                or not abstract
+                or not file_value
+                or category not in _QRI_CATEGORIES
+            ):
                 return "unparsed", []
             structured.append(
                 {
                     "severity": severity,
                     "abstract": abstract,
-                    "reported_category": (
-                        category if _CATEGORY.fullmatch(category) else ""
-                    ),
+                    "reported_category": category,
                     "source_format": "qri-v1",
                 }
             )

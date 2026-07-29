@@ -312,3 +312,30 @@ When reviewing AI-generated changes, prioritize:
 Cost-awareness check:
 - Flag workflows that escalate to higher-cost models without clear reasoning need.
 - Recommend defaulting to lower-cost tiers for deterministic refactors.
+
+## Machine-Readable Review Trailer (`qri-v1`)
+
+After the complete human-readable review, end the response with exactly one
+fenced `qri-v1` block containing a valid JSON array. Copy only confirmed
+findings already present in the human report; this trailer must not change
+review judgment or introduce new findings.
+
+Each finding must contain exactly:
+
+- `severity`: `CRITICAL`, `HIGH`, `MEDIUM`, or `LOW`
+- `category`: one of `ui-correctness`, `data-integrity`,
+  `matching-correctness`, `compatibility`, `delivery-reliability`,
+  `feature-gating`, `injection`, `validation`, `race-idempotency`,
+  `error-handling`, `transaction-integrity`, `secret-exposure`,
+  `authorization`, `type-safety`, `accessibility`, `performance`,
+  `observability`, `test-eval`, `lifecycle-cleanup`, `dependency-config`,
+  or `uncategorized`
+- `abstract`: one concise sentence of at least five words, without code
+  snippets, secrets, URLs, or prose formatting
+- `file`: repository-relative file path for the finding
+
+Use an empty array for a clean review. Emit no text after the block.
+
+```qri-v1
+[]
+```

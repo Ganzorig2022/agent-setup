@@ -27,6 +27,57 @@ FIXTURES = pathlib.Path(__file__).resolve().parent / "fixtures/review-intel"
 
 
 class ReviewIntelTests(unittest.TestCase):
+    def test_extracts_structured_qri_v1_findings(self) -> None:
+        output = """Human-readable review.
+
+```qri-v1
+[{"severity":"HIGH","category":"race-idempotency","abstract":"Retry can create a duplicate settlement row","file":"settlement.js"}]
+```
+"""
+
+        status, findings = extract_findings(output)
+
+        self.assertEqual(status, "parsed_findings")
+        self.assertEqual(
+            findings,
+            [
+                {
+                    "severity": "high",
+                    "abstract": "Retry can create a duplicate settlement row",
+                    "reported_category": "race-idempotency",
+                    "source_format": "qri-v1",
+                }
+            ],
+        )
+
+    def test_qri_v1_rejects_a_finding_without_file(self) -> None:
+        output = """```qri-v1
+[{"severity":"HIGH","category":"race-idempotency","abstract":"Retry can create a duplicate settlement row"}]
+```"""
+
+        self.assertEqual(extract_findings(output), ("unparsed", []))
+
+    def test_qri_v1_rejects_extra_finding_fields(self) -> None:
+        output = """```qri-v1
+[{"severity":"LOW","category":"test-eval","abstract":"Trailer includes a field outside the contract","file":"review.py","line":42}]
+```"""
+
+        self.assertEqual(extract_findings(output), ("unparsed", []))
+
+    def test_qri_v1_rejects_categories_outside_the_contract(self) -> None:
+        output = """```qri-v1
+[{"severity":"MEDIUM","category":"made-up-category","abstract":"Finding uses an unsupported category value","file":"review.py"}]
+```"""
+
+        self.assertEqual(extract_findings(output), ("unparsed", []))
+
+    def test_qri_v1_rejects_an_empty_file_value(self) -> None:
+        output = """```qri-v1
+[{"severity":"LOW","category":"test-eval","abstract":"Finding has no usable file location","file":""}]
+```"""
+
+        self.assertEqual(extract_findings(output), ("unparsed", []))
+
     def test_fixture_corpus_covers_guardian_unparsed_and_redaction(self) -> None:
         guardian, reason = parse_codex_candidates(
             FIXTURES / "codex/guardian-union.jsonl"
@@ -674,7 +725,7 @@ class ReviewIntelTests(unittest.TestCase):
             trailer = [
                 {
                     "severity": "MAJOR",
-                    "category": "race",
+                    "category": "race-idempotency",
                     "abstract": "CustomerLedger reads invoice_rows before commit",
                     "file": "internal.ts",
                 }
@@ -709,7 +760,10 @@ class ReviewIntelTests(unittest.TestCase):
 
             finding = result.traces[0]["findings"][0]
             self.assertEqual(finding["severity"], "high")
-            self.assertEqual(finding["reported_category"], "race")
+            self.assertEqual(
+                finding["reported_category"],
+                "race-idempotency",
+            )
             self.assertNotIn("CustomerLedger", json.dumps(finding))
 
     def test_clean_parser_does_not_treat_incidental_pass_as_clean(self) -> None:
