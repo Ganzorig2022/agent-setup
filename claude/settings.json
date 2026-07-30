@@ -124,5 +124,6 @@
   "autoMemoryEnabled": false,
   "theme": "dark-ansi",
   "editorMode": "normal",
+  "autoCompactEnabled": true,
   "autoUpdaterChannel": "latest"
 }
