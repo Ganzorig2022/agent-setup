@@ -53,3 +53,25 @@ Run `npx -y chrome-devtools-axi --help` for flags and environment variables, or 
 - Pipe output through grep/head to extract specific data from large pages.
 - Add `--full` to snapshot-producing commands to disable truncation.
 - Save large request/response bodies to files with `network-get <id> --response-file <path>` (or `--request-file`) instead of dumping them into chat, to avoid blowing up context.
+
+## Hard-won gotchas
+
+Graduated from always-loaded memory — these cost real debugging time.
+
+### Unattended / cron runs
+- `CHROME_DEVTOOLS_AXI_USER_DATA_DIR` gives a persistent profile, so a login survives runs and reboots. Headless **keeps** the logged-in session; headed can come up logged-**out** on the same profile. The bridge persists across `npx -y chrome-devtools-axi` calls.
+- Under launchd's sparse PATH, resolve npx by **absolute path** (glob the newest `~/.nvm/versions/node/*/bin/npx`) — the shell PATH is not present. Working pattern: `~/.local/bin/x-harvest.py`.
+- Since axi ≥0.1.26 snapshot lines may append attribute flags after the label (`button "Reply" disableable disabled`) — match label + `\bdisabled\b` as a **word**, never anchor to line-end.
+
+### X / Twitter without an API token
+- Verified 2026-06: public Nitter is dead (`nitter.net` 200-but-empty, others 403) and RSSHub `/twitter` is 404. The only token-free route to real X posts is a logged-in headless browser. **Bluesky RSS** (`bsky.app/profile/<handle>/rss`) is a reliable proxy source.
+- X's hosted MCP (api.x.com/mcp) was evaluated and **skipped**: read-only, and billed pay-per-use with no free tier (~$0.005/post read ≈ $37/mo for a daily harvest). Fallback only if headless scraping dies permanently.
+- A borrowed X session can be revoked account-side (owner logins / password changes kill it). Symptom: login walls in every X job. Fix: `python3 ~/.local/bin/x-harvest.py --login` (headed window, sign in, close).
+
+### X composer writes (Draft.js)
+Single tweets and profile-field edits work; **multi-tweet threads are unreliable** — `/compose/post` renders duplicate composers (scope selectors to `[role="dialog"]`) and X auto-restores stale drafts.
+
+- Set text with `execCommand('insertText')`, never `.value`. Replace a stale draft with selectAll (only when text is present) + `insertText` in **one** event.
+- **Never** `execCommand('delete')` on the composer — it desyncs Draft.js: text lands visually but React registers nothing, so the send button stays disabled.
+- Use a **real CDP `click @uid`** for add/menu/pin buttons; a synthetic `.click()` is ignored (though it works for some, e.g. profile Save).
+- After `insertText`, React re-renders the send button to *enabled* a beat later and the a11y snapshot lags the DOM — snapshotting for the uid immediately returns None (`Reply button not found/clickable`, 0/N posted). **Poll the DOM `aria-disabled` on `[data-testid="tweetButtonInline"]` until enabled BEFORE snapshotting the uid.** Never snapshot straight after setting text.

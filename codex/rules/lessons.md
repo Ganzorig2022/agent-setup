@@ -24,7 +24,13 @@ general rules in `rules/common/`; this file is for cross-cutting tooling/workflo
   must say "do not commit" — leave changes uncommitted.
 - `config.toml` `notify` accepts a SINGLE program — to add behavior, wrap it
   (`~/.codex/hooks/notify-wrapper.py` forwards to the original notifier first, then acts).
-  Subagent threads write their own rollouts under `~/.codex/sessions/` with
-  `session_meta.payload.source.subagent` (nickname/role/parent_thread_id),
-  `turn_context.model`, and `token_count` events — parsed into the per-subagent usage log
-  at `~/.codex/log/subagent-usage.log`.
+  Subagent threads write their own rollouts under `~/.codex/sessions/YYYY/MM/DD/rollout-*.jsonl`
+  (never pruned) with `turn_context.model` and `token_count` events — parsed into the
+  per-subagent usage log at `~/.codex/log/subagent-usage.log`. That log records **cumulative
+  telemetry snapshots**, not one line per run (durations bogus, e.g. `371m` on a short run):
+  count cross-check only, never a 1:1 join.
+- `session_meta.payload.source.subagent` is a **tagged union**, not a flat record:
+  `thread_spawn.agent_role` (custom agents) vs `other: "guardian"` (the built-in auto-review
+  gate). Parsing only the first arm silently drops guardian. Guardian emits per-turn records —
+  dedupe by `session_id`, not record (8 rollouts → 6 sessions; naive counting gave 199).
+  `parent_thread_id` gives parent correlation.
