@@ -31,11 +31,7 @@ Run independent agents in parallel — never sequential when tasks don't depend 
 Reviewer stacking: file-type reviewers (`code-reviewer`/`typescript-reviewer`/`react-reviewer`/`flutter-reviewer`) never stack with each other — pick exactly one per change. Specialists (`security-reviewer`, `database-reviewer`, `silent-failure-hunter`) DO stack on top when their trigger matches.
 
 ## Agents vs Skills
-Same domain, different mechanism — don't run both for one job:
-- **Agent** = delegated worker in its own context window; returns only a summary. Use for independent/cold review or grading, heavy fan-out exploration, parallel work, or keeping large output out of the main thread.
-- **Skill** = procedure/knowledge injected into the *current* context; you stay in control and keep full context. Use for a guided workflow or project-specific procedure applied to work you're actively doing in this thread.
-
-Rule of thumb: need isolation, independence, or parallelism → agent. Need a checklist/procedure inline → skill.
+Same domain, different mechanism — don't run both for one job. Need isolation, independence, or parallelism → agent. Need a checklist/procedure inline → skill.
 
 | Domain | Default | The other one |
 |--------|---------|---------------|
@@ -60,22 +56,11 @@ Rule of thumb: need isolation, independence, or parallelism → agent. Need a ch
 - For current third-party library/framework/SDK APIs (versions, signatures, new or changed features), consult **Context7** (`resolve-library-id` → `query-docs`) before coding from memory — it pulls up-to-date, version-specific docs. Use for non-trivial library/integration work; skip well-known stable basics. Codex has the same MCP server wired in `~/.codex/config.toml`.
 
 ## Coding Rules
-- Prefer immutable updates; never mutate function inputs, shared state, or caller-owned data
-- Local mutation is fine when confined to a function and not leaking side effects
-- KISS: simplest solution that works; clarity over cleverness
-- DRY: extract repeated logic; no copy-paste drift; abstract when repetition is real, not speculative
-- YAGNI: no features or abstractions before they're needed
+House preferences only — general engineering practice is assumed, not restated.
 - Files: 200–400 lines typical, 800 hard max; organize by feature/domain
-- Names: `camelCase` vars/functions · `PascalCase` types/components · `UPPER_SNAKE_CASE` constants · `is/has/should/can` booleans
-- Errors: handle explicitly; never swallow silently; user-friendly in UI, diagnostic context on server
-- Validate only at system boundaries (user input, external APIs); trust internal code
-- No hardcoded secrets, tokens, credentials, or environment-specific values — ever
-- No `console.log` debug statements in production paths
-- No speculative abstractions, broad rewrites, or unrelated cleanup
 
 ## Testing
 - Minimum 80% coverage · unit + integration + E2E (critical flows only)
-- Arrange-Act-Assert structure · descriptive test names that explain behavior
 
 ## Skills
 Invoke with `/skill-name` or they auto-trigger when task matches:
