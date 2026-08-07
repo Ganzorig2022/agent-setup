@@ -58,6 +58,10 @@ Run `npx -y chrome-devtools-axi --help` for flags and environment variables, or 
 
 Graduated from always-loaded memory — these cost real debugging time.
 
+### Google Cloud Console forms (tool-agnostic — applies to claude-in-chrome too)
+- A `/` typed while no text input holds focus fires GCP's **global search hotkey**: focus is stolen, the page navigates away, and the in-progress form is silently abandoned. Cost a service-account create mid-flight. Keep `/` out of every typed value (descriptions especially), or type it only after confirming focus.
+- Onboarding tooltips ("Is this a production environment?") pop in and steal focus from a field you just clicked, so the text lands nowhere. Screenshot to verify the field actually shows your text before submitting — a click returning success is not evidence the field is focused.
+
 ### Unattended / cron runs
 - `CHROME_DEVTOOLS_AXI_USER_DATA_DIR` gives a persistent profile, so a login survives runs and reboots. Headless **keeps** the logged-in session; headed can come up logged-**out** on the same profile. The bridge persists across `npx -y chrome-devtools-axi` calls.
 - Under launchd's sparse PATH, resolve npx by **absolute path** (glob the newest `~/.nvm/versions/node/*/bin/npx`) — the shell PATH is not present. Working pattern: `~/.local/bin/x-harvest.py`.
