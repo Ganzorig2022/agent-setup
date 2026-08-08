@@ -21,6 +21,24 @@ A fact earns a place in memory only if it is **durable AND reusable**:
 
 When unsure, leave it out. A lean memory that's all signal beats a bloated one nobody trusts.
 
+## Size budget — enforce on every run
+
+Always-loaded files are paid for in **every session and every custom subagent**, so this skill
+must subtract as well as add. Before finishing, check:
+
+```bash
+wc -c ~/.claude/agent-memory/STATE.md ~/.claude/CLAUDE.md ~/.claude/prompt-defense.md
+```
+
+- **STATE.md ceiling: 20 KB.** Over it, you must relocate something before adding anything.
+- **Three-sentence rule.** A fact needing more than ~3 sentences is not a standing fact — it is a
+  runbook. Put the body in a lazy-loaded skill (or `agent-setup/docs/`) and leave a one-line
+  pointer naming the skill. Precedent: the store-release cluster → `mobile-release-ops` skill;
+  the firstmate verdict → `docs/evaluations/firstmate.md`.
+- **Topic clusters are the relocation unit.** When 3+ bullets share a domain (releases, a vendor
+  console, one tool's mechanics), that cluster has outgrown STATE.md — extract it as a skill
+  rather than trimming the wording of each bullet.
+
 ## Memory map — route each fact to the correct file
 
 | Fact type | Claude target | Codex target |
