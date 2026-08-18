@@ -24,7 +24,7 @@ Identify: has `tailwindcss` + `zustand`, no Radix UI, no `@tanstack/react-query`
 - Lint: standalone `.prettierrc` — run `prettier --write` then `eslint --fix`
 - Package manager: **pnpm** (check `pnpm-lock.yaml`)
 
-### Gen 3 — React 19 / Radix UI (EASY_SYSTEM merchant web, TICKET web)
+### Gen 3 — React 19 / Radix UI (SYSTEM_EASY merchant web, SYSTEM_TICKET web)
 Identify: has `@radix-ui/react-*` or `next` ≥ 15 in package.json
 
 - **Next.js 15–16** + **React 19** + **TypeScript 5**
@@ -36,7 +36,7 @@ Identify: has `@radix-ui/react-*` or `next` ≥ 15 in package.json
 - Lint: **ESLint flat config** (`eslint.config.mjs`) — no `.eslintrc*`, no standalone `.prettierrc`
 - Package manager: **pnpm** (check `pnpm-lock.yaml`)
 
-### Gen 1.5 — Ant Design 5 hybrid (EASY_SYSTEM admin web)
+### Gen 1.5 — Ant Design 5 hybrid (SYSTEM_EASY admin web)
 Identify: has `antd` ≥ 5.x + `redux` in package.json
 
 - **Next.js 12** + **React 18** + **TypeScript 4**
