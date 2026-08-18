@@ -66,6 +66,32 @@ def resolve_codex() -> pathlib.Path | None:
 CODEX = resolve_codex()
 
 
+def resolve_toml_python() -> pathlib.Path | None:
+    candidates = (
+        os.environ.get("AGENT_SETUP_PYTHON"),
+        str(HOME / ".local/bin/python3"),
+        "/opt/homebrew/bin/python3",
+        "/usr/local/bin/python3",
+        sys.executable,
+    )
+    for raw_candidate in dict.fromkeys(candidate for candidate in candidates if candidate):
+        candidate = pathlib.Path(raw_candidate)
+        if not candidate.exists() or not os.access(candidate, os.X_OK):
+            continue
+        try:
+            result = subprocess.run(
+                [str(candidate), "-c", "import tomllib"],
+                capture_output=True,
+                timeout=10,
+                check=False,
+            )
+        except (OSError, subprocess.TimeoutExpired):
+            continue
+        if result.returncode == 0:
+            return candidate
+    return None
+
+
 def child_environment() -> dict[str, str]:
     environment = os.environ.copy()
     tool_dirs = [
@@ -128,6 +154,8 @@ def active_claude_summary() -> dict[str, object]:
     env = settings.get("env", {})
     permissions = settings.get("permissions", {})
     plugins = settings.get("enabledPlugins", {})
+    status_line = settings.get("statusLine", {})
+    subagent_status_line = settings.get("subagentStatusLine", {})
     return {
         "safe_env": {
             key: env[key]
@@ -143,8 +171,12 @@ def active_claude_summary() -> dict[str, object]:
         "enabled_plugins": sorted(
             name for name, enabled in plugins.items() if enabled
         ) if isinstance(plugins, dict) else [],
-        "status_line": settings.get("statusLine", {}).get("type"),
-        "subagent_status_line": settings.get("subagentStatusLine", {}).get("type"),
+        "status_line": status_line.get("type") if isinstance(status_line, dict) else None,
+        "subagent_status_line": (
+            subagent_status_line.get("type")
+            if isinstance(subagent_status_line, dict)
+            else None
+        ),
     }
 
 
@@ -195,7 +227,6 @@ def expected_managed_links() -> list[tuple[pathlib.Path, pathlib.Path, str | Non
     direct("agents/.skill-lock.json", HOME / ".agents/.skill-lock.json")
     direct("claude/CLAUDE.md", HOME / ".claude/CLAUDE.md")
     direct("claude/prompt-defense.md", HOME / ".claude/prompt-defense.md")
-    direct("claude/settings.json", HOME / ".claude/settings.json")
     direct("claude/agent-memory/STATE.md", HOME / ".claude/agent-memory/STATE.md")
     for name in ("agents", "commands", "qpay-context", "content"):
         direct(f"claude/{name}", HOME / ".claude" / name)
@@ -207,6 +238,7 @@ def expected_managed_links() -> list[tuple[pathlib.Path, pathlib.Path, str | Non
     for name in ("agents", "commands"):
         direct(f"codex/{name}", HOME / ".codex" / name)
     entries("codex/skills", HOME / ".codex/skills", skip=".system")
+    entries("codex/hooks", HOME / ".codex/hooks")
     direct("codex/rules/common", HOME / ".codex/rules/common")
     direct("codex/rules/qpay", HOME / ".codex/rules/qpay")
     direct("codex/rules/lessons.md", HOME / ".codex/rules/lessons.md")
@@ -249,9 +281,13 @@ def managed_link_summary() -> str:
             "problem_count": len(problems),
             "problems": problems,
             "machine_managed_exclusions": [
-                "~/.codex/config.toml",
-                "~/.codex/skills/.system",
+                "~/.claude/settings.json",
                 "~/.claude/settings.local.json",
+                "~/.codex/config.toml",
+                "~/.codex/rules/default.rules",
+                "~/.codex/skills/.system",
+                "~/.codex/auth.json",
+                "~/.codex/history and sessions",
             ],
         },
         indent=2,
@@ -266,6 +302,22 @@ def collect_snapshot() -> str:
         pass
 
     previous_reports = sorted(OUTPUT_DIR.glob("20*.md"))
+    toml_python = resolve_toml_python()
+    hygiene = (
+        run(
+            [
+                str(toml_python),
+                str(REPO_ROOT / "scripts/config-hygiene-audit.py"),
+                "--repo",
+                str(REPO_ROOT),
+                "--home",
+                str(HOME),
+            ],
+            timeout=120,
+        )
+        if toml_python
+        else "ERROR: Python 3.11+ is required for deterministic TOML hygiene checks"
+    )
     sections = {
         "audit_date": dt.date.today().isoformat(),
         "previous_report": previous_reports[-1].name if previous_reports else "(none)",
@@ -284,6 +336,7 @@ def collect_snapshot() -> str:
             timeout=30,
         ),
         "managed_link_health": managed_link_summary(),
+        "deterministic_config_hygiene": hygiene,
         "claude_settings_summary": json.dumps(
             active_claude_summary(), indent=2, sort_keys=True
         ),

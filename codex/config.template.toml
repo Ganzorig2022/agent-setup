@@ -1,8 +1,8 @@
 # Codex portable preferences — seed template.
 #
-# install.sh copies this to ~/.codex/config.toml ONLY if that file does not exist
-# (Codex rewrites config.toml constantly with machine-specific project trust + paths,
-# so it is never symlinked or overwritten). Merge new prefs by hand if needed.
+# install.sh allowlist-merges these preferences into ~/.codex/config.toml. The live
+# file is never symlinked: machine-specific project trust, paths, and runtime state
+# remain local and are preserved by scripts/apply-portable-config.py.
 #
 # Intentionally EXCLUDED (machine-specific, do not sync):
 #   notify, [projects.*], [marketplaces.*], [mcp_servers.*], [plugins.*],
@@ -12,12 +12,13 @@
 # which forwards to the computer-use client and logs per-subagent token usage
 # to ~/.codex/log/subagent-usage.log — re-wire manually on a new machine.
 
-model = "gpt-5.5"
-model_reasoning_effort = "high"
+model = "gpt-5.6-sol"
+model_reasoning_effort = "medium"
 plan_mode_reasoning_effort = "high"
 web_search = "cached"
 personality = "pragmatic"
-approvals_reviewer = "user"
+approvals_reviewer = "auto_review"
+service_tier = "default"
 suppress_unstable_features_warning = true
 
 [agents]

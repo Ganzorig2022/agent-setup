@@ -9,10 +9,10 @@ synced across machines via one private repo + symlinks.
 
 ```
 agents/    skills/ (.agents shared skill library — real content) + .skill-lock.json
-claude/    CLAUDE.md, prompt-defense.md, settings.json ($HOME-relative),
+claude/    CLAUDE.md, prompt-defense.md, settings.template.json (portable prefs),
            agent-memory/STATE.md, agents/ skills/ commands/ hooks/ qpay-context/
 codex/     AGENTS.md, MIGRATION.md, agents/ skills/ commands/, rules/{common,qpay,lessons.md},
-           config.template.toml  (portable prefs — seeded to ~/.codex/config.toml if absent)
+           hooks/, config.template.toml (portable prefs — safely merged into live config)
 opencode/  skills/, opencode.json
 home/      AGENTS.md  (→ ~/AGENTS.md)
 install.sh symlinks all of the above into place (idempotent, backs up existing files)
@@ -30,11 +30,15 @@ git clone git@github.com:Ganzorig2022/agent-setup.git ~/agent-setup
 ~/agent-setup/install.sh
 ```
 
-`install.sh` symlinks repo files into `~/.claude`, `~/.codex`, `~/.config/opencode`, and `~`.
+`install.sh` symlinks static repo files into `~/.claude`, `~/.codex`, `~/.config/opencode`, and `~`.
 Any pre-existing real file is moved to the owner-only `~/.agent-setup-backup/<timestamp>/`
 first. Re-running
 is a no-op for already-linked paths. Hook paths in `settings.json` use `$HOME`, so they work
 under any username.
+
+Mutable `~/.claude/settings.json` and `~/.codex/config.toml` are deliberately regular files.
+The installer runs an allowlisted merge from the two portable templates, validates the result,
+makes an owner-only backup when a live file changes, and preserves machine-local sections.
 
 Managed hook scripts are linked entry-by-entry instead of linking the whole hooks directory.
 This keeps runtime-only hook logs and caches local and out of the repository.
@@ -48,9 +52,13 @@ claude plugin install codex@openai-codex   # /codex:rescue|review|transfer — d
 
 ## Day-to-day sync
 
-Because files are symlinks back into this repo, edits made by any tool land in the repo:
+Static managed files are symlinks back into this repo, so intentional edits land in the repo.
+Mutable live settings do not: update their portable templates and apply them explicitly.
 
 ```sh
+python3 scripts/apply-portable-config.py --dry-run
+python3 scripts/apply-portable-config.py --apply
+
 cd ~/agent-setup && git add -A && git commit -m "update: …" && git push
 # on the other Mac:
 cd ~/agent-setup && git pull
@@ -63,11 +71,17 @@ These are secrets or machine-local state, deliberately excluded (see `.gitignore
 | File | Why excluded | How to restore |
 |------|--------------|----------------|
 | `~/.codex/auth.json` | OAuth credentials | run Codex login |
-| `~/.claude/settings.local.json` | contains local model API token | re-add local tokens by hand |
-| `~/.codex/config.toml` | machine-specific project-trust paths | Codex regenerates / edit locally |
-| `~/.codex/rules/default.rules` | per-machine approval allowlist (had a live JWT) | Codex regenerates on first run |
+| `~/.claude/settings.json` | mutable live settings; receives only allowlisted portable keys | run the portable merge |
+| `~/.claude/settings.local.json` | local permissions or model tokens | re-add locally; keep mode `0600` |
+| `~/.codex/config.toml` | portable prefs plus machine-specific trust/MCP/plugin paths | run the portable merge, then configure integrations locally |
+| `~/.codex/rules/default.rules` | accumulated approval decisions; may embed complete commands | rebuild deliberately; keep mode `0600` |
 | `~/.codex/skills/.system` | Codex-managed built-in skills, refreshed by the CLI | Codex recreates it on startup |
 | `*.sqlite`, `history.jsonl`, sessions, caches | runtime state, large | regenerated automatically |
+
+Concrete project trust, MCP servers, plugin/cache paths, notification commands, authentication,
+approval history, runtime databases, logs, sessions, and NUX state are never imported into a
+portable template. Desired integrations should be documented with placeholders, then configured
+per machine.
 
 ## Secret hygiene
 
@@ -76,3 +90,13 @@ Before any commit, confirm nothing sensitive is staged:
 ```sh
 git grep -nE '(omlx-|Bearer eyJ|ghp_|sk-[A-Za-z0-9]{20}|-----BEGIN)' -- . && echo "LEAK!" || echo clean
 ```
+
+Run the deterministic repository and live-config audit as the stronger gate:
+
+```sh
+python3 scripts/config-hygiene-audit.py
+```
+
+If a token ever reaches an approval rule or session transcript, remove the local plaintext copy
+without preserving it in a normal backup and rotate/revoke the credential. Redaction alone does
+not invalidate a credential that may already have been exposed.
