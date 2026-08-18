@@ -2,8 +2,8 @@
 
 ## Two Cores (Old vs New)
 QPay runs two parallel codebases — always know which one you're in:
-- **Old core** — legacy, cloned from **git.qpay.mn** (GitLab) to `/Users/dev/QPay`. The Stack A/B/C mix below (mostly Express/Babel + Sequelize/Mongo).
-- **New core** — the **github.com/qpay-mn** org, cloned to `~/qpay-mn`. Predominantly **Fastify + TypeScript + Zod** (Stack C) services + shared `qpay-lib-*` packages; Gen-3 (Next/React/Zustand/Radix) web apps.
+- **Old core** — legacy, cloned from **git.qpay.mn** (GitLab) to `/Users/dev/QPay`. The Stack A/B/C mix below (mostly Express/Babel + Sequelize/Mongo). Note `/Users/dev/QPay` also holds ~12 *new-core* clones, so the parent directory does not identify the core — read `git remote get-url origin`.
+- **New core** — the **github.com/qpay-mn** org, cloned to `~/qpay-mn`. Predominantly **Fastify + TypeScript + Zod** services (same shape as Stack C, but Stack C's exemplar `qpay-ticket-service-v2` is old-core — the stack label does not imply the core) + shared `qpay-lib-*` packages; Gen-3 (Next/React/Zustand/Radix) web apps.
 - Harvested architecture docs for both live in the **private** `knowledge-base` vault under `qpay/old-core/` and `qpay/new-core/`, queryable via the `qmd` MCP. Refresh with `qpay-gem-harvest.py`.
 
 ## CI — no `.gitlab-ci.yml`, but there IS a deploy pipeline
@@ -36,7 +36,7 @@ Identify: has `qpay-sequelize-postgres` in package.json
 - Bootstrap: `qpay-micro-service` (internal) wraps Express lifecycle
 - Lint: `eslint-config-airbnb` + `eslint-plugin-prettier` — NO standalone `.prettierrc`; run `npx eslint --fix` only
 
-### Stack B — EASY_SYSTEM services
+### Stack B — EASY_SYSTEM services (`/Users/dev/QPay/SYSTEM_EASY/`, `sms-*`)
 Identify: has `mongoose` in package.json
 
 - **Express 5** + **Babel** (not TypeScript)
@@ -46,7 +46,7 @@ Identify: has `mongoose` in package.json
 - Tests: **vitest** (present in some services)
 - Lint: same as Stack A (`eslint-config-airbnb` + eslint-plugin-prettier, no standalone .prettierrc)
 
-### Stack C — TICKET_SYSTEM (qpay-ticket-service-v2)
+### Stack C — TICKET system (`/Users/dev/QPay/SYSTEM_TICKET/qpay-ticket-service-v2`, old-core remote)
 Identify: has `fastify` in package.json
 
 - **Fastify 5** + **TypeScript** (not Babel — uses tsc)
