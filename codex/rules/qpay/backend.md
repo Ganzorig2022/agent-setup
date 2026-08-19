@@ -14,7 +14,8 @@ frontends too.
 That is NOT the same as "no automation". A pipeline does exist: it builds `deployment/Dockerfile`
 with the classic (non-BuildKit) builder, tags `git.qpay.mn:5005/<group>/<repo>:prod_<YYYYMMDD>`,
 pushes to that registry, then restarts the k8s deployment. Observed on qpay-vendor-web-v2,
-2026-07-29. What *drives* it is unconfirmed — do not guess Jenkins/Argo/etc. in writing; ask.
+2026-07-29. **It is driven by the Maintainer app, not Jenkins/Argo** (confirmed 2026-08-19 —
+see "Deploying and observing" below).
 
 Consequence when picking where a check goes: the image build is the only non-skippable gate —
 a failing `RUN` step means no image and no deploy, and the pipeline runs that Dockerfile. A
@@ -22,6 +23,22 @@ a failing `RUN` step means no image and no deploy, and the pipeline runs that Do
 before `pnpm install` fires husky's `prepare`), so moving a check out of the Dockerfile and into
 a hook downgrades it from enforced to advisory. Say so explicitly rather than treating the two
 as equivalent.
+
+## Deploying and observing (sandbox; prod is the same tooling)
+- **Deploy** = `sandbox-maintainer.qpay.mn/services`. Per-service row: edit icon → *Pod settings*
+  → Git branches → **Refresh** (a newly pushed branch will NOT appear until you do) → select →
+  Update → *Build & Deploy* → confirm. Status badge goes Building → Success; a build is ~1–3 min.
+- The row's branch **persists**: anyone deploying that service later rebuilds whatever branch is
+  set, so leaving a feature branch there silently hijacks the next deploy. Repoint when done.
+- Deploying a sibling branch **removes** whatever the previous branch shipped. Check what is
+  currently deployed before repointing, or you will silently un-deploy tickets sitting in QA.
+- **Logs/health** = `sandbox-dashboard.qpay.mn` → namespace picker (e.g. `qpay-sms`) → Pods:
+  Status, Restarts, age; the pod detail page has Logs. The dashboard token expires quickly and
+  only the user can re-auth.
+- Both are behind `sandbox-sso.qpay.mn`. Claude must never enter credentials — hand login to the
+  user. UI caution: the maintainer's accessibility labels are unreliable (a **delete** button has
+  been returned as "edit button") and rows reorder after an update, so map controls by position
+  via `read_page` and re-read after every change.
 
 ## Three Backend Stacks
 
@@ -86,6 +103,17 @@ src/
 - **Config from `src/config/`** — never read `process.env` directly inside services or models
 - **`configure()` picks the env block from `SERVER_ENV`, not `NODE_ENV`** (`qpay-micro-service/utils/configure.js`), defaulting to `development`. Blocks seen across old-core: `development | dev | sandbox | prod | prod_new`. A pod can carry `NODE_ENV=sandbox` while running `prod_new` config — `NODE_ENV` is decorative. A wrong value fails narrowly and misleadingly: most hosts fall back to in-cluster service names, so only the few with explicit public-hostname overrides (e.g. S3) break, and code gated on an exact value (`SERVER_ENV === "prod"`) silently never fires. Check the deployment manifest before trusting the env name.
 - **Run `npx eslint --fix` only** — no standalone prettier, no `.prettierrc`
+
+## Framework Error Handling (qpay-micro-service, Stack A/B)
+- `errorHandler` status map: Validation/JoiValidation → 400 · Unauthorized → 401 · Forbidden → 403 · **Notfound → 422 (NOT 404)** · Unique → 409 · Custom/InternalServer/TypeError/DatabaseConnection → 500. Any *unhandled* throw → 500 `SYSTEM_BUSY`.
+- So `SYSTEM_BUSY` in a response or UI toast carries zero diagnostic information — it means "go read the pod log". Never document 404 for a `NotfoundError` route in OpenAPI; it is 422.
+- `BaseError(code, message)`: an Error passed as the 2nd arg becomes `errorMessage`, which is server-log only and never serialized to the client. No `{ cause }` chaining — the stack is captured at the throw site, not at the original failure.
+
+## Postgres Grants — every new table needs one
+Tables are owned by `postgres`, but services connect as a *separate* role holding explicit per-table grants, so a newly created table inherits none. First use fails `permission denied` (SQLSTATE 42501, `aclcheck_error`), surfacing to the caller as `SYSTEM_BUSY`. Grant explicitly to the app role (`database.username` in the service config). Do NOT mirror "every grantee on a peer table" — that copies *who* has access without *what*, handing write access to read-only `*_ro` roles.
+
+## Raw SQL (Stack A/B)
+`db.query(sql, replacements)` from `qpay-sequelize-postgres` supports named `:param` binding and returns `{select,update,create,delete,raw}()`. Use it instead of string interpolation. Postgres `::CAST` syntax is safe with sequelize replacements (verified on 6.37.8).
 
 ## Stack C Critical Rules
 - **Zod schema at route entry** — `z.object({ ... }).strict()`
