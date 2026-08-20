@@ -68,6 +68,7 @@ Identify: has `antd` ≥ 5.x + `redux` in package.json
 
 ## Critical Rules (executors commonly get these wrong)
 - **Pin the package manager — `packageManager` in `package.json`.** Unpinned, `corepack enable` in a Dockerfile resolves the *latest* pnpm at container run time, so an untouched repo breaks when the registry moves. pnpm ≥11 also runs an implicit install before `pnpm run <script>` (`verify-deps-before-run` defaults to `install`), so `CMD ["pnpm","start"]` fails `EACCES` in a non-root app dir (qpay-vendor-web-v2 pods, exit 243, Jul 2026 — code untouched since Dec). Fix: pin `packageManager`, Next `output: "standalone"`, start with `node server.js` — no package manager at runtime. NOT a lockfile problem: pnpm 11 reads `lockfileVersion: '9.0'` fine.
+- **sonner: never `return toast.error(...)` from a fetch wrapper** — it returns a truthy toast id, so every failed request resolves truthy and `if (resp) { ...success... }` call sites treat failures as successes. Fixing the return to `undefined` is only half the change: a toast id is a *primitive* that tolerates `resp.x` (yields `undefined`), while `undefined.x` **throws**, so every unguarded dereference becomes a live TypeError. Audit and guard all call sites in the same commit — `tsc` cannot see it when the result is typed `any`.
 - **Never mutate Redux state directly** — always use action creators / reducers
 - **Never mutate Zustand state directly** — use `set()` function
 - **AntD Gen 1: top-level imports only** — `import { Button } from 'antd'`, never `antd/lib/button`

@@ -107,7 +107,7 @@ src/
 ## Stack A/B Critical Rules (executors commonly get these wrong)
 - **No try/catch in route handlers** — Express 5 catches async throws natively; adding try/catch is wrong
 - **Use `qpay-micro-logging`, never `console.log`** — this is the internal logging package
-- **Joi schema at route entry only** — `.required()`, `.valid()`, `.uuid()`, `.max()`, `stripUnknown: true`; never validate in service layer
+- **Joi schema at route entry only** — `.required()`, `.valid()`, `.uuid()`, `.max()`; never validate in service layer. **`stripUnknown` does nothing here**: `qpay-micro-service/src/method/index.js` hardcodes `allowUnknown: true` and *discards* `joi.value`, so the handler always sees the raw body — destructure named fields, never spread `req.body` into a write. For **GET the schema validates `req.query`, never `req.params`**, which is why route-param routes pass `null` and re-validate by hand.
 - **Service functions have no req/res/next** — they receive plain data and return data or throw
 - **Config from `src/config/`** — never read `process.env` directly inside services or models
 - **`configure()` picks the env block from `SERVER_ENV`, not `NODE_ENV`** (`qpay-micro-service/utils/configure.js`), defaulting to `development`. Blocks seen across old-core: `development | dev | sandbox | prod | prod_new`. A pod can carry `NODE_ENV=sandbox` while running `prod_new` config — `NODE_ENV` is decorative. A wrong value fails narrowly and misleadingly: most hosts fall back to in-cluster service names, so only the few with explicit public-hostname overrides (e.g. S3) break, and code gated on an exact value (`SERVER_ENV === "prod"`) silently never fires. Check the deployment manifest before trusting the env name.
@@ -122,7 +122,10 @@ src/
 Tables are owned by `postgres`, but services connect as a *separate* role holding explicit per-table grants, so a newly created table inherits none. First use fails `permission denied` (SQLSTATE 42501, `aclcheck_error`), surfacing to the caller as `SYSTEM_BUSY`. Grant explicitly to the app role (`database.username` in the service config). Do NOT mirror "every grantee on a peer table" — that copies *who* has access without *what*, handing write access to read-only `*_ro` roles.
 
 ## Raw SQL (Stack A/B)
-`db.query(sql, replacements)` from `qpay-sequelize-postgres` supports named `:param` binding and returns `{select,update,create,delete,raw}()`. Use it instead of string interpolation. Postgres `::CAST` syntax is safe with sequelize replacements (verified on 6.37.8).
+`db.query(sql, replacements, options)` from `qpay-sequelize-postgres` supports named `:param` binding and returns `{select,update,create,delete,raw}()`; the 3rd arg is the session/transaction. Use it instead of string interpolation. Postgres `::CAST` syntax is safe with sequelize replacements (verified on 6.37.8). Three traps:
+- Replacements are **client-side escaped substitution, not server-side bind params**, so a JSON string `"20"` bound to `:limit` renders `LIMIT '20'` and errors — `Number()` limit/offset before binding.
+- A placeholder must be followed by a **non-word character**. Appending `"AND ..."` with no leading space after `:merchant_id` yields `:merchant_idAND`, which Sequelize reads as a placeholder of that name and never binds. Interpolating SQL *structure* (`${where}`, connectors, conditional clauses) is fine; interpolating a *value* is the injection.
+- **Unused replacement keys are tolerated**, so one object can feed both a count query and a rows query.
 
 ## Stack C Critical Rules
 - **Zod schema at route entry** — `z.object({ ... }).strict()`
