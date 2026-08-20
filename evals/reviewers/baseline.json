@@ -125,6 +125,17 @@
     "empty-catch-notify": 1.0
    },
    "trap_flags": 0.67
+  },
+  "payments-reviewer|wallet-charge-idempotency": {
+   "model": "sonnet",
+   "reps": 1,
+   "bug_hits": {
+    "debit-not-idempotent-after-commit": 1.0,
+    "read-modify-write-balance": 1.0,
+    "string-money-arithmetic": 1.0
+   },
+   "trap_flags": 0.0,
+   "_note": "captured 2026-08-20, 1 rep, CLI 2.1.237; fixture corrected twice first (see truth.json history)"
   }
  }
 }

@@ -40,10 +40,10 @@
       "id": "deposit-already-idempotent",
       "file": "walletSmsWorker.js",
       "keywords": [
-        ["recorddeposit", "deposit"],
-        ["idempoten", "not idempotent", "double credit", "duplicate", "replay"]
+        ["recorddeposit"],
+        ["not idempotent", "no idempotency", "missing idempotency", "lacks idempotency", "without an idempotency", "double credit", "double-credit", "credited twice", "credits twice"]
       ],
-      "note": "recordDeposit is guarded by a unique index on provider_txn_id and, on SequelizeUniqueConstraintError, re-reads the original OUTSIDE the (already rolled-back) transaction — it is correct. Calling it non-idempotent = FP. Mentioning it as the correct counter-example is fine. HISTORY 2026-08-20: the first version of this fixture did the recovery read with `{ transaction: t }`, which Postgres rejects because the unique violation aborts the whole transaction block; payments-reviewer caught that on rep 1 and the fixture was fixed. It was a real bug, not a trap hit — audit the raw output before treating this trap as tripped."
+      "note": "recordDeposit is guarded by a unique index on provider_txn_id and, on SequelizeUniqueConstraintError, re-reads the original OUTSIDE the (already rolled-back) transaction — it is correct. Calling it non-idempotent = FP. Mentioning it as the correct counter-example is fine. HISTORY 2026-08-20: payments-reviewer found TWO real bugs in this helper on successive runs — (1) the recovery read reused `{ transaction: t }`, which Postgres rejects because the unique violation aborts the whole transaction block, and (2) the credit UPDATE never checked affected rows, so a missing (merchant, currency) wallet silently committed an uncredited deposit that the unique index would replay as 'successful' forever. Both were fixture defects, not trap hits; both are fixed. The trap keywords were then narrowed to the specific FP claim (helper lacks idempotency / double-credits) because the broad set matched valid findings that merely mentioned the helper. Lesson: a trap must be minimal and truly correct — audit raw output before treating this as tripped."
     },
     {
       "id": "segment-count-not-money",

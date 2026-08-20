@@ -1,6 +1,8 @@
 const Queue = require('bull');
 const logger = require('qpay-micro-logging');
 const db = require('qpay-sequelize-postgres');
+const { literal } = require('sequelize');
+const { NoWalletError } = require('../errors');
 const { INVOICE_SMS_STATUS } = require('../constants/invoice');
 const { calculateBulkSmsPrice } = require('../services/smsPriceCalculator');
 const { buildInvoiceSmsMessage } = require('../utils/invoiceSms');
@@ -103,10 +105,22 @@ async function recordDeposit({ merchant_id, amount, currency, provider_txn_id })
         { transaction: t }
       );
 
-      await db.query(
-        'UPDATE wallet SET balance = balance + :amount WHERE merchant_id = :merchant_id AND currency = :currency',
-        { replacements: { amount, merchant_id, currency }, transaction: t }
+      const [credited] = await db.update(
+        db.Wallet,
+        { balance: literal('balance + :amount') },
+        {
+          where: { merchant_id, currency },
+          replacements: { amount },
+          transaction: t,
+        }
       );
+
+      // 0 rows means no wallet exists for this (merchant, currency) — throw so
+      // the deposit row rolls back with it rather than recording an uncredited
+      // deposit that the unique index would then replay as "successful".
+      if (credited === 0) {
+        throw new NoWalletError(merchant_id, currency);
+      }
 
       return deposit;
     });
