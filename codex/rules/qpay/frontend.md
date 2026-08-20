@@ -16,7 +16,7 @@ Identify: has `antd` ≤ 4.x + `redux` in package.json
 - Package manager: **yarn** (check `yarn.lock`)
 
 ### Gen 2 — Tailwind / Zustand (mid-gen QPay projects)
-Identify: has `tailwindcss` + `zustand`, no Radix UI, no `@tanstack/react-query`
+Identify: has `tailwindcss` + `zustand`, no Radix/Base UI, no `@tanstack/react-query`
 
 - **Next.js** (13–14) + **TypeScript**
 - UI: **Tailwind CSS** — no Ant Design
@@ -24,11 +24,17 @@ Identify: has `tailwindcss` + `zustand`, no Radix UI, no `@tanstack/react-query`
 - Lint: standalone `.prettierrc` — run `prettier --write` then `eslint --fix`
 - Package manager: **pnpm** (check `pnpm-lock.yaml`)
 
-### Gen 3 — React 19 / Radix UI (SYSTEM_EASY merchant web, SYSTEM_TICKET web)
-Identify: has `@radix-ui/react-*` or `next` ≥ 15 in package.json
+### Gen 3 — React 19 / shadcn primitives (SYSTEM_EASY merchant web, SYSTEM_TICKET web)
+Identify: has `@radix-ui/react-*` **or** `@base-ui/react`, or `next` ≥ 15 in package.json
 
 - **Next.js 15–16** + **React 19** + **TypeScript 5**
-- UI: **Tailwind CSS 3/4** + **Radix UI** primitives (shadcn-style component library)
+- UI: **Tailwind CSS 3/4** + shadcn-style components over **one of two primitive libraries** —
+  **Radix UI** (older repos) or **Base UI** (`@base-ui/react`, shadcn's default since Jul 2026).
+  **package.json does NOT reliably tell you which** — read `components.json` (`style: base-*`
+  means Base UI) or grep an actual `src/components/ui/*.tsx` import. Live example: in
+  `qpay-docs-web-v2` all 14 UI components import `@base-ui/react` while package.json still
+  lists 8 stale `@radix-ui/*` deps — trusting package.json there puts Radix components into a
+  pure Base UI codebase. `qpay-deps-web` is Base-UI-only.
 - State: **Zustand**
 - Data fetching: **TanStack Query v5** (`@tanstack/react-query`)
 - Forms: **react-hook-form** + Zod for schema validation
@@ -69,6 +75,10 @@ Identify: has `antd` ≥ 5.x + `redux` in package.json
 - **Hydration errors** — no `Date.now()`, `Math.random()`, or browser-only APIs at render time
 - **SWR (Gen 1)** — for data fetching; use `axios` for mutations, not `fetch`
 - **Do not mix generations** — do not import Radix into Gen 1/2 or AntD into Gen 2/3
+- **Do not mix primitives inside Gen 3** — a repo is Radix *or* Base UI; adding a component built
+  on the other one ships a second primitive library and a second set of a11y/portal semantics.
+  Confirm which one the repo uses (see Gen 3 above) before running `npx shadcn add` or hand-writing
+  a component; `components.json` `style` is the authority, package.json is not.
 - **Gen 3 `next/image` on Next 16** — `images.qualities` defaults to `[75]`; any other `quality` value warns at runtime. SVGs are not optimized at all, so `quality` on an SVG is a no-op — drop the prop rather than widening the config. `fill` also needs a positioned parent (`relative`).
 - **`next/image` + Tailwind preflight** — preflight forces `img { height: auto }`, so `width`/`height` props that disagree with the file's intrinsic ratio trigger "width or height modified" warnings. Set them to the real ratio (read the SVG's own `width`/`height`); rendered size does not change.
 - **`next/image` `remotePatterns` — never `hostname: '*'`** — a wildcard turns `/_next/image` into an open proxy that fetches and re-serves any URL, and is the surface for the recurring Image Optimization DoS advisories. If every `src` is a local `/public` path, use `[]`; otherwise list specific hosts. Note Radix `AvatarImage` renders a plain `<img>`, so remote avatars bypass the optimizer and are unaffected by this setting either way.
