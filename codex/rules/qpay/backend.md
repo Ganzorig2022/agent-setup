@@ -30,6 +30,15 @@ as equivalent.
   Update → *Build & Deploy* → confirm. Status badge goes Building → Success; a build is ~1–3 min.
 - The row's branch **persists**: anyone deploying that service later rebuilds whatever branch is
   set, so leaving a feature branch there silently hijacks the next deploy. Repoint when done.
+- **A green "Success" build does NOT mean the new code is running.** The build pushes a new image,
+  but the k8s Deployment still references the previously-set image, so the rolled pod comes up on
+  the OLD image and the deploy silently has no effect. After every build you must update the
+  Deployment's image in `sandbox-dashboard.qpay.mn` to the newly built one. Symptoms when skipped:
+  maintainer shows Success and a fresh `Last deployed` time, the pod restarts with a NEW
+  pod-template-hash and 0 restarts, and the app still serves the old behaviour — so pod age and
+  build status both look correct and prove nothing. Verify the code, not the badge: for a
+  frontend, fetch a `/_next/static/chunks/*.js` and grep for the changed logic; for a backend,
+  check the boot log for a line the new build added.
 - Deploying a sibling branch **removes** whatever the previous branch shipped. Check what is
   currently deployed before repointing, or you will silently un-deploy tickets sitting in QA.
 - **Logs/health** = `sandbox-dashboard.qpay.mn` → namespace picker (e.g. `qpay-sms`) → Pods:
