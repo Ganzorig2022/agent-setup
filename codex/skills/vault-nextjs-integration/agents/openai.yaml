@@ -1,4 +1,0 @@
-interface:
-  display_name: "Vault Next.js Integration"
-  short_description: "Vault secrets for Next.js Docker deployments"
-  default_prompt: "Use $vault-nextjs-integration to integrate HashiCorp Vault secret delivery into a Next.js application using Vault Agent rendered env files, Docker startup wiring, and plain-env fallback mode."
