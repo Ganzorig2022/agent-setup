@@ -18,6 +18,7 @@ AGENTS = [
     "architect", "bug-hunter", "build-error-resolver", "code-reviewer",
     "database-reviewer",
     "doc-updater", "e2e-runner", "flutter-reviewer", "goal-verifier",
+    "payments-reviewer",
     "performance-optimizer", "planner", "react-reviewer", "refactor-cleaner",
     "security-reviewer", "silent-failure-hunter", "tdd-guide",
     "typescript-reviewer",
@@ -33,6 +34,11 @@ NEW_AGENT_DEFAULTS = {
         "model_reasoning_effort": "high",
         "sandbox_mode": "read-only",
         "nickname_candidates": '["database reviewer", "database_reviewer", "db reviewer"]',
+    },
+    "payments-reviewer": {
+        "model_reasoning_effort": "high",
+        "sandbox_mode": "read-only",
+        "nickname_candidates": '["payments reviewer", "payments_reviewer", "money reviewer"]',
     },
     "performance-optimizer": {
         "model_reasoning_effort": "high",

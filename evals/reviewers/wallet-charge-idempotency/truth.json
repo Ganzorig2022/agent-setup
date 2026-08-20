@@ -1,0 +1,59 @@
+{
+  "agents": ["payments-reviewer", "code-reviewer"],
+  "bugs": [
+    {
+      "id": "debit-not-idempotent-after-commit",
+      "file": "walletSmsWorker.js",
+      "lines": [42, 84],
+      "severity": "CRITICAL",
+      "keywords": [
+        ["idempoten", "double charge", "double-charge", "charged twice", "charge twice", "duplicate charge", "deducted twice", "twice"],
+        ["completed", "event handler", "outside", "redeliver", "re-deliver", "retry", "retries", "at-least-once", "at least once"]
+      ],
+      "_note": "essence = the debit hangs off the completed event with no idempotency key, so a redelivered/duplicated completion debits again. Agents may frame it as charge-after-commit OR as missing idempotency key — either angle counts."
+    },
+    {
+      "id": "read-modify-write-balance",
+      "file": "walletSmsWorker.js",
+      "lines": [72, 79],
+      "severity": "CRITICAL",
+      "keywords": [
+        ["read-modify-write", "read modify write", "race", "concurrent", "lost update", "atomic", "not atomic", "$inc", "conditional update"],
+        ["balance"]
+      ],
+      "_note": "new_balance computed in JS from a prior read, then written back — two concurrent completions lose one debit. Distinct from the idempotency bug even though the lines overlap."
+    },
+    {
+      "id": "string-money-arithmetic",
+      "file": "walletSmsWorker.js",
+      "lines": [70, 77],
+      "severity": "HIGH",
+      "keywords": [
+        ["string", "number(", "parsefloat", "float", "floating", "precision", "decimal", "coerce"],
+        ["balance", "price", "amount", "money", "currency"]
+      ],
+      "_note": "balance and total_price are strings coerced with Number() for arithmetic, then stringified back. Flagging either the storage type or the coercion counts."
+    }
+  ],
+  "traps": [
+    {
+      "id": "deposit-already-idempotent",
+      "file": "walletSmsWorker.js",
+      "keywords": [
+        ["recorddeposit", "deposit"],
+        ["idempoten", "not idempotent", "double credit", "duplicate", "replay"]
+      ],
+      "note": "recordDeposit is guarded by a unique index on provider_txn_id and, on SequelizeUniqueConstraintError, re-reads the original OUTSIDE the (already rolled-back) transaction — it is correct. Calling it non-idempotent = FP. Mentioning it as the correct counter-example is fine. HISTORY 2026-08-20: the first version of this fixture did the recovery read with `{ transaction: t }`, which Postgres rejects because the unique violation aborts the whole transaction block; payments-reviewer caught that on rep 1 and the fixture was fixed. It was a real bug, not a trap hit — audit the raw output before treating this trap as tripped."
+    },
+    {
+      "id": "segment-count-not-money",
+      "file": "walletSmsWorker.js",
+      "keywords": [
+        ["segmentcount", "segment count"],
+        ["float", "decimal", "monetary", "money type", "precision"]
+      ],
+      "note": "segmentCount is a message-segment integer, not a monetary amount — demanding DECIMAL/Decimal128 for it = FP"
+    }
+  ],
+  "max_false_positives": 2
+}

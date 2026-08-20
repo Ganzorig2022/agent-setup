@@ -15,7 +15,9 @@ Self-invoked checklist — not automatic. When a trigger below matches, I should
 |---------|-------|
 | Complex feature / refactor / migration / architecture | `planner` or `architect` |
 | Code written or modified — ONE reviewer by file type | `.tsx/.jsx` → `react-reviewer` · `.ts/.js` (non-React) → `typescript-reviewer` · `.dart` → `flutter-reviewer` · other / mixed / cross-cutting → `code-reviewer` |
-| Migration / schema change / raw SQL / Sequelize models, transactions, indexes | `database-reviewer` |
+| Migration / schema change / raw SQL / **Sequelize** models, transactions, indexes | `database-reviewer` (Postgres/Sequelize only) |
+| Money touched — balances, wallet debit/credit, pricing or tariff arithmetic, invoice/settlement amounts, charge/refund, money-moving queue jobs | `payments-reviewer` |
+| Queue change — new/modified Bull or BullMQ producer, processor, or completed/failed handler | `payments-reviewer` if it moves money, else `silent-failure-hunter` |
 | Error handling touched — catch blocks, fallbacks, retries, webhook acks | `silent-failure-hunter` |
 | Something is slow — endpoint latency, N+1, bundle size, memory growth | `performance-optimizer` |
 | Bug sweep of an existing/inherited area (NOT a diff) / pre-refactor audit | `bug-hunter` (via `/hunt-bugs`) |
@@ -28,7 +30,7 @@ Self-invoked checklist — not automatic. When a trigger below matches, I should
 
 Run independent agents in parallel — never sequential when tasks don't depend on each other.
 
-Reviewer stacking: file-type reviewers (`code-reviewer`/`typescript-reviewer`/`react-reviewer`/`flutter-reviewer`) never stack with each other — pick exactly one per change. Specialists (`security-reviewer`, `database-reviewer`, `silent-failure-hunter`) DO stack on top when their trigger matches.
+Reviewer stacking: file-type reviewers (`code-reviewer`/`typescript-reviewer`/`react-reviewer`/`flutter-reviewer`) never stack with each other — pick exactly one per change. Specialists (`security-reviewer`, `database-reviewer`, `payments-reviewer`, `silent-failure-hunter`) DO stack on top when their trigger matches. On a money path, `payments-reviewer` is not optional — no other agent covers currency, rounding, or charge-once semantics.
 
 ## Agents vs Skills
 Same domain, different mechanism — don't run both for one job. Need isolation, independence, or parallelism → agent. Need a checklist/procedure inline → skill.
@@ -70,6 +72,7 @@ Invoke with `/skill-name` or they auto-trigger when task matches:
 | `/debug` | Something broken in a qpay-* service |
 | `/debug-bull` | Bull queue not processing, stalled, or failing jobs |
 | `/new-route` | Adding a new API endpoint to a backend service |
+| `payment-service-patterns` | Writing (not reviewing) money code — wallet, settlement, ledger, callbacks. Reviewing is `payments-reviewer`'s job |
 | `/sql-query-optimization` | Slow query, N+1, missing index |
 
 ## Commits
