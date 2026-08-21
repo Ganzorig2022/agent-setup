@@ -44,6 +44,9 @@ as equivalent.
 - **Logs/health** = `sandbox-dashboard.qpay.mn` → namespace picker (e.g. `qpay-sms`) → Pods:
   Status, Restarts, age; the pod detail page has Logs. The dashboard token expires quickly and
   only the user can re-auth.
+- **Nobody on the app side has cluster access.** The user cannot run `kubectl`; a dedicated
+  DevOps engineer executes every k8s command and deployment. Prefer a path through the deployed
+  app's own API over anything needing `kubectl exec`/`cp` — it removes a human round-trip.
 - Both are behind `sandbox-sso.qpay.mn`. Claude must never enter credentials — hand login to the
   user. UI caution: the maintainer's accessibility labels are unreliable (a **delete** button has
   been returned as "edit button") and rows reorder after an update, so map controls by position

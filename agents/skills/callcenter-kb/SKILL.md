@@ -73,6 +73,18 @@ Its query deliberately excludes two classes — **do not widen it**:
 
 After any restore that changes answer text, regenerate: the old clip no longer matches the words.
 
+### Two opposing `audio_file` conventions — do not cross them
+
+| table | stored value | played as |
+|---|---|---|
+| `kb_entries` | **bare** `kb_<id>.mp3` | `call_handler.py:577` strips `.mp3`, prepends `kb_audio/` |
+| greetings | **prefixed** `kb_audio/greeting_<id>.mp3` (`greeting_service.py:47`) | `sound:{audio_file}` verbatim |
+
+Writing the greeting form into a KB row yields `sound:kb_audio/kb_audio/kb_<id>`, which never
+resolves — the caller gets `noanswer` and nothing in the DB looks wrong. This shipped once
+(`generate_kb_audio.py`, 149 of 158 rows) and survived a full row-level restore audit, because
+the audit compared against the CSV, which has no `audio_file` column.
+
 ### Deployment topology — the failure mode
 
 `static/kb_audio` is in **both `.gitignore` and `.dockerignore`**, so generated clips reach
@@ -84,9 +96,20 @@ When the file is missing, `call_handler` catches the playback error and falls ba
 `noanswer` sound — a caller hears "no answer" for a question the KB can answer perfectly. The
 symptom does not point at audio, so check file presence on the PVC early.
 
-Regenerating in-pod works: the image ships `ffmpeg`, `scripts/`, `elevenlabs`, and `asyncpg`, and
-`AUDIO_DIR` resolves to the PVC mountpath. Probe writability first (`id`, `ls -ld`, `touch`) —
-NFS ignores `fsGroup`, so the mount can be read-only to uid 1000 in practice.
+### Regenerating without cluster access
+
+`POST /api/kb/{id}/generate-audio` (admin auth) renders **inside the pod**, so mp3 + ulaw land on
+the PVC and it writes the correct bare `audio_file`. Drive it over HTTPS with
+`scripts/regenerate_kb_audio_via_api.py` — no kubectl, no deploy, no DevOps. Prefer it over
+`scripts/generate_kb_audio.py`, which writes to whatever machine runs it. Verified 2026-08-21: the
+PVC **is** writable by uid 1000 (the `fsGroup`/NFS concern did not materialise) and 158/158
+entries rendered. Caveat: the endpoint only `logger.warning`s an ffmpeg failure and then sets
+`audio_file` anyway, so a 200 does not prove the `.ulaw` exists.
+
+`/static/kb_audio/<name>.{mp3,ulaw}` is served **unauthenticated** on the deployed host. A HEAD
+sweep over it is the cheapest proof that clips actually reached the PVC — and the only one
+available without cluster access. (The KB admin page renders the filename as text only; the
+greetings page is the one with an `<audio>` element.)
 
 ## 4. ElevenLabs scoped keys
 
@@ -96,7 +119,7 @@ endpoint you actually intend to use (a `--limit 1` TTS canary), not with `/v1/us
 
 `elevenlabs_provider.text_to_speech` has no try/except and no fallback provider, so a bad key
 takes down live TTS for every call, not just clip generation. Verify the key held by the cluster
-Secret separately from the local `.env` one — they drift.
+Secret separately from the local `.env` one — they drift. The sandbox cluster's key was verified working 2026-08-21 (149 consecutive renders, zero failures).
 
 ## 5. Verifying a CSV export against the live DB
 
