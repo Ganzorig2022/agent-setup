@@ -92,9 +92,24 @@ neither git nor the image, while the shared sandbox DB references them by name. 
 on the `kb-audio-rwx` PVC (NFS, RWX) — backend mounts it at `/app/static/kb_audio`, Asterisk at
 `/var/lib/asterisk/sounds/kb_audio`. See `docs/infrastructure/DEVOPS_WEBTIER.md` §7.
 
+Pod label selectors and the Maintainer↔deployment mapping are in
+`docs/infrastructure/BUILD_AND_IMAGES.md` — note there is **no `app=qpay-callcenter` label**, so a
+selector guessed from the project name matches nothing.
+
 When the file is missing, `call_handler` catches the playback error and falls back to the
 `noanswer` sound — a caller hears "no answer" for a question the KB can answer perfectly. The
 symptom does not point at audio, so check file presence on the PVC early.
+
+### `SEED_ON_STARTUP` can revert the KB on any backend restart
+
+The backend entrypoint runs `scripts/seed_all.py` when `SEED_ON_STARTUP` is truthy, and the seed
+**overwrites** matched rows (`setattr` over every field, `seed_all.py:175`) rather than skipping
+them. The fixtures in `scripts/seed/fixtures/` **are the old 87-row KB** — 30 canonical (matched
+by `intent_slug`) + 57 variants (slug + exact question). A restart with it on reverts those
+answers and embeddings and NULLs `audio_file` on 24 canonical + all 57 variants. It defaults off
+when unset; confirm from the pod boot log (`SEED_ON_STARTUP unset — skipping data seed`) after any
+backend roll, or detect it after the fact with an `updated_at` window — the seed stamps every row
+it touches.
 
 ### Regenerating without cluster access
 

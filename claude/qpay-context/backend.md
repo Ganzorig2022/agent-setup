@@ -39,6 +39,9 @@ as equivalent.
   build status both look correct and prove nothing. Verify the code, not the badge: for a
   frontend, fetch a `/_next/static/chunks/*.js` and grep for the changed logic; for a backend,
   check the boot log for a line the new build added.
+- One repo can map to **several Maintainer rows** (callcenter: web / backend / embedder, each with
+  its own Docker tag and `Last deployed`). "I deployed" is therefore ambiguous — check the row for
+  the service you mean; deploying one leaves every other image untouched.
 - Deploying a sibling branch **removes** whatever the previous branch shipped. Check what is
   currently deployed before repointing, or you will silently un-deploy tickets sitting in QA.
 - **Logs/health** = `sandbox-dashboard.qpay.mn` → namespace picker (e.g. `qpay-sms`) → Pods:
