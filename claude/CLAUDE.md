@@ -48,7 +48,7 @@ Same domain, different mechanism — don't run both for one job. Need isolation,
 - Planner → executor → reviewer for non-trivial work
 - Do not implement when user asks only for a plan
 - Do not run destructive commands
-- Never `git stash` or reinstall deps while the user has a dev server / watcher attached to the working tree — it re-links `node_modules` under the running process and crashes it. Snapshot to the scratchpad instead
+- Never `git stash` — not as a side step, not with a dev server attached (it re-links `node_modules` and crashes the watcher; a stash inside a compound command has silently removed live work mid-review). To compare against HEAD, `git show HEAD:path` into the scratchpad. Same for reinstalling deps under a running watcher
 - Prefer minimal, reversible changes
 - For one-off or infrequent operational work, start with the simplest direct end-to-end path. Add wrappers, control planes, policy layers, custom verifiers, or automation only after a concrete blocker or repeated need justifies them
 - Preserve project conventions unless asked to change them
