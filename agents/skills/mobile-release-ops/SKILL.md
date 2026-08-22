@@ -145,6 +145,22 @@ It is **buried at the bottom of the left column of Security Center**, below the 
 
 Business details go **read-only** (`aria-disabled`) while verification is `In review`.
 
+### Changing the legal entity name
+
+Editing a **verified** business's **legal name, country, phone, website, or tax ID** forces the
+**entire verification process again** ([help/322526208728282](https://www.facebook.com/business/help/322526208728282));
+adding a *missing* phone or website is the only exempt edit. Combined with the read-only rule
+above, a legal-entity rename has exactly one coherent order: **finish the current review →
+rename legally → re-verify**. You cannot verify against a certificate that does not exist yet,
+and you cannot edit the field mid-review.
+
+Budget the **stamped English translation**, not the console work — that is the slow leg, and a
+rename means paying for it twice. Tax ID sitting on the same trigger list means a re-registration
+that changes both still costs only one re-verification, but also that there is no way to change
+one and avoid the cycle. A rename also ripples outside Meta: Play developer accounts are bound to
+a verified legal entity, App Store Connect has its own entity-name process, and payout/bank
+records carry the legal name — inventory all of them at once.
+
 ### Documents and language
 
 **Mongolian is not among Meta's 21 supported document languages** → a stamped agency English translation is required, and Business details must then be entered in **Latin to match the translated document**, not Cyrillic.
